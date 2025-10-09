@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Booking Dates</title>
+  <title>Booking Form Extended</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -16,13 +16,37 @@
     </div>
 
     <!-- 📅 Форма бронирования -->
-    <h1>Выбор дат</h1>
-    <label for="from">Заезд</label>
+    <h1>Бронирование визита</h1>
+
+    <!-- Даты -->
+    <label for="from">Дата заезда</label>
     <input id="from" type="date" />
-    <label for="to">Выезд</label>
+
+    <label for="to">Дата выезда</label>
     <input id="to" type="date" />
+
+    <!-- Количество людей -->
+    <label for="guests">Количество человек</label>
+    <input id="guests" type="number" min="1" placeholder="Например, 2" />
+
+    <!-- Из них детей -->
+    <label for="children">Из них детей</label>
+    <input id="children" type="number" min="0" placeholder="Например, 1" />
+
+    <!-- Возраст детей -->
+    <label for="children_age">Возраст детей</label>
+    <input id="children_age" type="text" placeholder="Например, 5 и 8 лет" />
+
+    <!-- Контакты -->
+    <label for="phone">Телефон для связи</label>
+    <input id="phone" type="tel" placeholder="+7 (___) ___-__-__" />
+
+    <label for="email">Адрес электронной почты</label>
+    <input id="email" type="email" placeholder="example@mail.ru" />
+
     <button id="confirm">Подтвердить</button>
   </div>
+
   <script src="./app.js"></script>
 </body>
 </html>
