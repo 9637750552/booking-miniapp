@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Карта участков</title>
+
+  <!-- Leaflet + Draw -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+
+  <link rel="stylesheet" href="./map.css"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Панель управления -->
+  <div id="panel">
+    <div><b>Даты:</b> <span id="dates">—</span></div>
+    <div><b>Гости:</b> <span id="guests">—</span></div>
+    <div id="picked">Участок не выбран</div>
+    <div class="row">
+      <button id="confirm" disabled>Подтвердить</button>
+    </div>
+    <hr/>
+    <div class="row">
+      <label class="toggle">
+        <input type="checkbox" id="drawToggle"/>
+        <span>Режим оцифровки</span>
+      </label>
+      <button id="saveGeoJson" title="Сохранит текущие слои в pitches.geo.json">💾 Сохранить JSON</button>
+    </div>
+    <div class="hint">
+      Двойной клик по полигону — редактировать свойства (name/type/capacity/price/is_free).
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  <script src="./map.js"></script>
+</body>
+</html>
