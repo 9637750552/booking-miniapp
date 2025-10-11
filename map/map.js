@@ -7,28 +7,52 @@ const guests = Number(q.get('guests') || 1);
 /* === Telegram WebApp === */
 const tg = window.Telegram?.WebApp; tg?.expand?.();
 
-/* === Обновляем панель === */
+/* === Панель === */
 document.getElementById('dates').textContent  = (from && to) ? `${from} → ${to}` : '—';
 document.getElementById('guests').textContent = guests || '—';
-const pickedEl   = document.getElementById('picked');
-const confirmBtn = document.getElementById('confirm');
-const drawToggle = document.getElementById('drawToggle');
-const saveBtn    = document.getElementById('saveGeoJson');
+const pickedEl     = document.getElementById('picked');
+const confirmBtn   = document.getElementById('confirm');
+const drawToggle   = document.getElementById('drawToggle');
+const saveBtn      = document.getElementById('saveGeoJson');
+const clearBtn     = document.getElementById('clearAll');
+const posEl        = document.getElementById('pos');
+const opacityInp   = document.getElementById('opacity');
+const moveBtn      = document.getElementById('moveSelected');
 confirmBtn.disabled = true;
 
-/* === Карта в CRS.Simple с подложкой мастер-плана === */
-const IMG_W = 1254;   // ширина изображения (px)
-const IMG_H = 843;    // высота изображения (px)
-const bounds = [[0,0], [IMG_H, IMG_W]];
-
+/* === Карта в CRS.Simple === */
 const map = L.map('map', {
   crs: L.CRS.Simple,
   minZoom: -2, maxZoom: 2, zoomSnap: 0.25, zoomDelta: 0.5
 });
-L.imageOverlay('../assets/masterplan.png', bounds).addTo(map);
-map.fitBounds(bounds);
 
-/* === Слой участков: подкраска + события === */
+/* === Загружаем изображение, берём реальные размеры === */
+let overlay = null;
+loadImage('../assets/masterplan.png').then(({src, width, height}) => {
+  const bounds = [[0,0],[height, width]]; // [y,x]
+  overlay = L.imageOverlay(src, bounds, { opacity: Number(opacityInp.value)/100 }).addTo(map);
+  map.setMaxBounds(bounds);
+  map.fitBounds(bounds);
+
+  map.on('mousemove', (e) => {
+    posEl.textContent = `${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}`;
+  });
+
+  // После подложки грузим участки
+  loadPitches();
+});
+
+/* помощник: получить naturalWidth/Height */
+function loadImage(url){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ src: url, width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = reject;
+    img.src = url + ((/\?/).test(url) ? '&' : '?') + 'v=' + Date.now(); // bypass cache
+  });
+}
+
+/* === Слой участков === */
 let selectedLayer = null;
 const layerPolygons = L.geoJSON(null, {
   style: f => ({
@@ -39,20 +63,21 @@ const layerPolygons = L.geoJSON(null, {
   onEachFeature: (f, layer) => {
     if (f?.properties?.label) layer.bindTooltip(f.properties.label, { direction:'top', offset:[0,-6] });
     layer.on('click', () => selectLayer(f, layer));
-    layer.on('dblclick', () => editProps(layer)); // редактирование свойств по даблклику
+    layer.on('dblclick', () => editProps(layer));
   }
 }).addTo(map);
 
-/* === Загрузка GeoJSON участков === */
-fetch('./pitches.geo.json')
-  .then(r => r.json())
-  .then(data => {
-    layerPolygons.addData(data);
-    const b = layerPolygons.getBounds();
-    if (b.isValid()) map.fitBounds(b.pad(0.15));
-    console.log('✅ Pitches loaded:', (data.features || []).length);
-  })
-  .catch(err => console.error('pitches load error', err));
+function loadPitches(){
+  fetch('./pitches.geo.json')
+    .then(r => r.json())
+    .then(data => {
+      layerPolygons.addData(data);
+      const b = layerPolygons.getBounds();
+      if (b.isValid()) map.fitBounds(b.pad(0.15));
+      console.log('✅ Pitches loaded:', (data.features || []).length);
+    })
+    .catch(err => console.error('pitches load error', err));
+}
 
 /* === Выбор участка === */
 function selectLayer(feature, layer) {
@@ -60,7 +85,6 @@ function selectLayer(feature, layer) {
   const p = (feature && feature.properties) || {};
   pickedEl.textContent = `Выбрано: ${p.name || p.id} (${p.type || ''})`;
   confirmBtn.disabled = !Boolean(p.is_free);
-  // подсветка выбранного
   layerPolygons.resetStyle();
   layer.setStyle({ color:'#2563eb', weight:3, fillOpacity: .45 });
 }
@@ -77,7 +101,7 @@ confirmBtn.addEventListener('click', () => {
     pitch_type: p.type || null
   };
   tg?.sendData?.(JSON.stringify(payload));
-  // tg?.close?.(); // при желании закрывать миниапп
+  // tg?.close?.();
 });
 
 /* === Режим оцифровки (Leaflet.Draw) === */
@@ -86,19 +110,19 @@ let drawControl = null;
 function enableDraw() {
   if (drawControl) return;
   drawControl = new L.Control.Draw({
+    position: 'topright',  // тулбар справа сверху
     draw: {
-      polygon: { allowIntersection:false, showArea:false },
-      marker:  true,
-      rectangle:false, polyline:false, circle:false, circlemarker:false
+      polygon:   { allowIntersection:false, showArea:false },
+      rectangle: true,
+      marker:    true,
+      polyline:  false, circle:false, circlemarker:false
     },
     edit: { featureGroup: layerPolygons }
   });
   map.addControl(drawControl);
 
-  // создание новых объектов
   map.on(L.Draw.Event.CREATED, e => {
     const layer = e.layer;
-    // назначим дефолтные свойства
     const nextId = getNextId();
     const baseProps = {
       id: nextId,
@@ -115,7 +139,6 @@ function enableDraw() {
     selectLayer(layer.feature, layer);
   });
 
-  // после редактирования оставляем выбор свежим
   map.on(L.Draw.Event.EDITED, () => {
     if (selectedLayer) selectLayer(selectedLayer.feature, selectedLayer);
   });
@@ -133,7 +156,27 @@ drawToggle.addEventListener('change', (e) => {
   e.target.checked ? enableDraw() : disableDraw();
 });
 
-/* === Редактирование свойств выбранного полигона === */
+/* === Перемещать целиком выбранный (Leaflet.PM) === */
+let moveMode = false;
+moveBtn.addEventListener('click', () => {
+  if (!selectedLayer) {
+    alert('Сначала выберите участок кликом.');
+    return;
+  }
+  moveMode = !moveMode;
+  if (moveMode) {
+    // включаем drag только у выбранного
+    selectedLayer.pm.enable({ draggable:true, snappable:false, allowSelfIntersection:false });
+    moveBtn.classList.add('active');
+    moveBtn.textContent = '⤴︎ Готово (выкл. перенос)';
+  } else {
+    selectedLayer.pm.disable();
+    moveBtn.classList.remove('active');
+    moveBtn.textContent = '⤴︎ Переместить выбранный';
+  }
+});
+
+/* === Редактирование свойств по даблклику === */
 function editProps(layer) {
   const f = layer.feature || {};
   const p = f.properties || {};
@@ -145,22 +188,26 @@ function editProps(layer) {
 
   f.properties = { ...p, name, type, capacity, price, is_free: isFree, label: name || p.label };
   layer.feature = f;
-  // перекрасим слой, если менялась доступность
   layer.setStyle && layer.setStyle({ color: isFree ? '#22c55e' : '#9ca3af' });
   selectLayer(f, layer);
 }
 
-/* === Экспорт pitches.geo.json === */
+/* === Сохранить/Очистить === */
 saveBtn.addEventListener('click', () => {
   const data = layerPolygons.toGeoJSON();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'pitches.geo.json';
-  a.click();
+  downloadJSON(data, 'pitches.geo.json');
+});
+clearBtn.addEventListener('click', () => {
+  if (!confirm('Удалить все полигоны и точки?')) return;
+  layerPolygons.clearLayers();
 });
 
-/* === Вспомогательное: следующий id === */
+/* === Прозрачность подложки === */
+opacityInp.addEventListener('input', () => {
+  if (overlay) overlay.setOpacity(Number(opacityInp.value)/100);
+});
+
+/* === Вспомогательные === */
 function getNextId() {
   let maxId = 1000;
   layerPolygons.eachLayer(l => {
@@ -168,4 +215,12 @@ function getNextId() {
     if (typeof id === 'number' && id > maxId) maxId = id;
   });
   return maxId + 1;
+}
+
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
 }
