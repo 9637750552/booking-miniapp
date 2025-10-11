@@ -20,18 +20,47 @@ const opacityInp   = document.getElementById('opacity');
 const moveBtn      = document.getElementById('moveSelected');
 confirmBtn.disabled = true;
 
+/* === Перетаскивание панели (drag & drop, pointer events) === */
+makeDraggablePanel(document.getElementById('panel'), document.querySelector('#panel .drag-handle'));
+function makeDraggablePanel(panel, handle){
+  let dragging = false, startX=0, startY=0, startLeft=0, startTop=0;
+  const onPointerDown = (e) => {
+    dragging = true;
+    panel.style.transition = 'none';
+    panel.style.left = panel.offsetLeft + 'px';
+    panel.style.top  = panel.offsetTop  + 'px';
+    panel.style.transform = 'none';
+    startX = e.clientX; startY = e.clientY;
+    startLeft = panel.offsetLeft; startTop = panel.offsetTop;
+    handle.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    panel.style.left = (startLeft + dx) + 'px';
+    panel.style.top  = (startTop  + dy) + 'px';
+  };
+  const onPointerUp = (e) => { dragging = false; handle.releasePointerCapture(e.pointerId); };
+  handle.addEventListener('pointerdown', onPointerDown);
+  handle.addEventListener('pointermove', onPointerMove);
+  handle.addEventListener('pointerup', onPointerUp);
+}
+
 /* === Карта в CRS.Simple === */
 const map = L.map('map', {
   crs: L.CRS.Simple,
-  minZoom: -2, maxZoom: 2, zoomSnap: 0.25, zoomDelta: 0.5
+  minZoom: -2, maxZoom: 2, zoomSnap: 0.25, zoomDelta: 0.5,
+  inertia: true, worldCopyJump: false
 });
 
 /* === Загружаем изображение, берём реальные размеры === */
 let overlay = null;
 loadImage('../assets/masterplan.png').then(({src, width, height}) => {
-  const bounds = [[0,0],[height, width]]; // [y,x]
+  const bounds = [[0,0],[height, width]];         // [y,x]
   overlay = L.imageOverlay(src, bounds, { opacity: Number(opacityInp.value)/100 }).addTo(map);
-  map.setMaxBounds(bounds);
+
+  // ВАЖНО: не ставим setMaxBounds → карта свободно перетаскивается без "возврата"
   map.fitBounds(bounds);
 
   map.on('mousemove', (e) => {
@@ -73,7 +102,7 @@ function loadPitches(){
     .then(data => {
       layerPolygons.addData(data);
       const b = layerPolygons.getBounds();
-      if (b.isValid()) map.fitBounds(b.pad(0.15));
+      if (b.isValid()) map.fitBounds(b.pad(0.1));
       console.log('✅ Pitches loaded:', (data.features || []).length);
     })
     .catch(err => console.error('pitches load error', err));
@@ -110,7 +139,7 @@ let drawControl = null;
 function enableDraw() {
   if (drawControl) return;
   drawControl = new L.Control.Draw({
-    position: 'topright',  // тулбар справа сверху
+    position: 'topright',
     draw: {
       polygon:   { allowIntersection:false, showArea:false },
       rectangle: true,
@@ -125,13 +154,8 @@ function enableDraw() {
     const layer = e.layer;
     const nextId = getNextId();
     const baseProps = {
-      id: nextId,
-      name: `NEW-${nextId}`,
-      type: "tent-60",
-      capacity: 4,
-      price: 1500,
-      is_free: true,
-      label: `N${nextId}`
+      id: nextId, name: `NEW-${nextId}`, type: "tent-60",
+      capacity: 4, price: 1500, is_free: true, label: `N${nextId}`
     };
     layer.feature = layer.feature || { type:'Feature', properties:{}, geometry:{} };
     layer.feature.properties = { ...baseProps };
@@ -165,7 +189,6 @@ moveBtn.addEventListener('click', () => {
   }
   moveMode = !moveMode;
   if (moveMode) {
-    // включаем drag только у выбранного
     selectedLayer.pm.enable({ draggable:true, snappable:false, allowSelfIntersection:false });
     moveBtn.classList.add('active');
     moveBtn.textContent = '⤴︎ Готово (выкл. перенос)';
@@ -216,7 +239,6 @@ function getNextId() {
   });
   return maxId + 1;
 }
-
 function downloadJSON(obj, filename){
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
