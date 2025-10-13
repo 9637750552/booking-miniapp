@@ -41,7 +41,7 @@ function makeDraggablePanel(panel, handle){
     panel.style.left = (startLeft + dx) + 'px';
     panel.style.top  = (startTop  + dy) + 'px';
   };
-  const onPointerUp = (e) => { dragging = false; handle.releasePointerCapture(e.pointerId); };
+  const onPointerUp = (e) => { dragging = false; try{handle.releasePointerCapture(e.pointerId);}catch{} };
   handle.addEventListener('pointerdown', onPointerDown);
   handle.addEventListener('pointermove', onPointerMove);
   handle.addEventListener('pointerup', onPointerUp);
@@ -57,10 +57,10 @@ const map = L.map('map', {
 /* === Загружаем изображение, берём реальные размеры === */
 let overlay = null;
 loadImage('../assets/masterplan.png').then(({src, width, height}) => {
-  const bounds = [[0,0],[height, width]];
+  const bounds = [[0,0],[height, width]];         // [y,x]
   overlay = L.imageOverlay(src, bounds, { opacity: Number(opacityInp.value)/100 }).addTo(map);
 
-  // без setMaxBounds — можно свободно таскать карту
+  // свободное перетаскивание карты
   map.fitBounds(bounds);
 
   map.on('mousemove', (e) => {
@@ -114,6 +114,11 @@ function selectLayer(feature, layer) {
   confirmBtn.disabled = !Boolean(p.is_free);
   layerPolygons.resetStyle();
   layer.setStyle({ color:'#2563eb', weight:3, fillOpacity: .45 });
+
+  // гарантируем, что у выбранного слоя есть PM-обработчики
+  if (!selectedLayer.pm || !selectedLayer.pm.enabled()) {
+    try { selectedLayer.pm.enable({ draggable:false }); selectedLayer.pm.disable(); } catch {}
+  }
 }
 
 /* === Отправка выбора в бота === */
@@ -130,6 +135,20 @@ confirmBtn.addEventListener('click', () => {
   tg?.sendData?.(JSON.stringify(payload));
   // tg?.close?.();
 });
+
+/* === Переключение поведения карты (на время drag) === */
+function disableMapInteractions(){
+  map.dragging.disable();
+  map.doubleClickZoom.disable();
+  map.boxZoom.disable();
+  map.keyboard.disable();
+}
+function enableMapInteractions(){
+  map.dragging.enable();
+  map.doubleClickZoom.enable();
+  map.boxZoom.enable();
+  map.keyboard.enable();
+}
 
 /* === Режим оцифровки (Leaflet.Draw) === */
 let drawControl = null;
@@ -178,36 +197,25 @@ drawToggle.addEventListener('change', (e) => {
   e.target.checked ? enableDraw() : disableDraw();
 });
 
-/* === Перемещать целиком выбранный (Leaflet.PM) — FIX: не тянуть карту вместе === */
+/* === Перемещать целиком выбранный (Leaflet.PM) — карта НЕ двигается === */
 let moveMode = false;
 
-function disableMapInteractions(){
-  map.dragging.disable();
-  map.doubleClickZoom.disable();
-  map.boxZoom.disable();
-  map.keyboard.disable();
-  // оставляем колесо-zoom активным; убери строку ниже, если тоже мешает
-  // map.scrollWheelZoom.disable();
-}
-function enableMapInteractions(){
-  map.dragging.enable();
-  map.doubleClickZoom.enable();
-  map.boxZoom.enable();
-  map.keyboard.enable();
-  // map.scrollWheelZoom.enable();
-}
-
-function attachDragGuards(layer){
-  // стопим «проброс» mousedown на карту
-  layer.on('mousedown', (e) => {
-    if (moveMode) {
-      e.originalEvent?.preventDefault?.();
-      e.originalEvent?.stopPropagation?.();
+function attachMoveGuards(layer){
+  // стопим всплытие нажатий (чтобы карта не начинала drag)
+  const stop = (e) => {
+    if (!moveMode) return;
+    if (e.originalEvent) {
+      e.originalEvent.preventDefault();
+      e.originalEvent.stopPropagation();
     }
-  });
-  // на старте drag — вырубаем панорамирование карты
+    L.DomEvent.stop(e);
+  };
+  layer.off('mousedown touchstart pointerdown', stop);
+  layer.on('mousedown touchstart pointerdown', stop);
+
+  // при начале/окончании drag — выключаем/включаем поведение карты
+  layer.off('pm:dragstart'); layer.off('pm:dragend');
   layer.on('pm:dragstart', () => disableMapInteractions());
-  // по окончании — возвращаем
   layer.on('pm:dragend',   () => enableMapInteractions());
 }
 
@@ -217,13 +225,23 @@ moveBtn.addEventListener('click', () => {
     return;
   }
   moveMode = !moveMode;
+
   if (moveMode) {
+    // сразу выключаем поведение карты, чтобы не цеплялось на первый пик
+    disableMapInteractions();
+
+    // включаем draggable именно у выбранного слоя
+    selectedLayer.bringToFront?.();
     selectedLayer.pm.enable({ draggable:true, snappable:false, allowSelfIntersection:false });
-    attachDragGuards(selectedLayer);
+
+    // гарантии: подвешиваем стражей
+    attachMoveGuards(selectedLayer);
+
     moveBtn.classList.add('active');
     moveBtn.textContent = '⤴︎ Готово (выкл. перенос)';
   } else {
-    selectedLayer.pm.disable();
+    // выходим из режима переноса
+    try { selectedLayer.pm.disable(); } catch {}
     enableMapInteractions();
     moveBtn.classList.remove('active');
     moveBtn.textContent = '⤴︎ Переместить выбранный';
