@@ -20,7 +20,7 @@ const opacityInp   = document.getElementById('opacity');
 const moveBtn      = document.getElementById('moveSelected');
 confirmBtn.disabled = true;
 
-/* === Перетаскивание панели (drag & drop, pointer events) === */
+/* === Перетаскивание панели === */
 makeDraggablePanel(document.getElementById('panel'), document.querySelector('#panel .drag-handle'));
 function makeDraggablePanel(panel, handle){
   let dragging = false, startX=0, startY=0, startLeft=0, startTop=0;
@@ -57,27 +57,25 @@ const map = L.map('map', {
 /* === Загружаем изображение, берём реальные размеры === */
 let overlay = null;
 loadImage('../assets/masterplan.png').then(({src, width, height}) => {
-  const bounds = [[0,0],[height, width]];         // [y,x]
+  const bounds = [[0,0],[height, width]];
   overlay = L.imageOverlay(src, bounds, { opacity: Number(opacityInp.value)/100 }).addTo(map);
 
-  // ВАЖНО: не ставим setMaxBounds → карта свободно перетаскивается без "возврата"
+  // без setMaxBounds — можно свободно таскать карту
   map.fitBounds(bounds);
 
   map.on('mousemove', (e) => {
     posEl.textContent = `${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}`;
   });
 
-  // После подложки грузим участки
   loadPitches();
 });
 
-/* помощник: получить naturalWidth/Height */
 function loadImage(url){
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve({ src: url, width: img.naturalWidth, height: img.naturalHeight });
     img.onerror = reject;
-    img.src = url + ((/\?/).test(url) ? '&' : '?') + 'v=' + Date.now(); // bypass cache
+    img.src = url + ((/\?/).test(url) ? '&' : '?') + 'v=' + Date.now();
   });
 }
 
@@ -180,8 +178,39 @@ drawToggle.addEventListener('change', (e) => {
   e.target.checked ? enableDraw() : disableDraw();
 });
 
-/* === Перемещать целиком выбранный (Leaflet.PM) === */
+/* === Перемещать целиком выбранный (Leaflet.PM) — FIX: не тянуть карту вместе === */
 let moveMode = false;
+
+function disableMapInteractions(){
+  map.dragging.disable();
+  map.doubleClickZoom.disable();
+  map.boxZoom.disable();
+  map.keyboard.disable();
+  // оставляем колесо-zoom активным; убери строку ниже, если тоже мешает
+  // map.scrollWheelZoom.disable();
+}
+function enableMapInteractions(){
+  map.dragging.enable();
+  map.doubleClickZoom.enable();
+  map.boxZoom.enable();
+  map.keyboard.enable();
+  // map.scrollWheelZoom.enable();
+}
+
+function attachDragGuards(layer){
+  // стопим «проброс» mousedown на карту
+  layer.on('mousedown', (e) => {
+    if (moveMode) {
+      e.originalEvent?.preventDefault?.();
+      e.originalEvent?.stopPropagation?.();
+    }
+  });
+  // на старте drag — вырубаем панорамирование карты
+  layer.on('pm:dragstart', () => disableMapInteractions());
+  // по окончании — возвращаем
+  layer.on('pm:dragend',   () => enableMapInteractions());
+}
+
 moveBtn.addEventListener('click', () => {
   if (!selectedLayer) {
     alert('Сначала выберите участок кликом.');
@@ -190,10 +219,12 @@ moveBtn.addEventListener('click', () => {
   moveMode = !moveMode;
   if (moveMode) {
     selectedLayer.pm.enable({ draggable:true, snappable:false, allowSelfIntersection:false });
+    attachDragGuards(selectedLayer);
     moveBtn.classList.add('active');
     moveBtn.textContent = '⤴︎ Готово (выкл. перенос)';
   } else {
     selectedLayer.pm.disable();
+    enableMapInteractions();
     moveBtn.classList.remove('active');
     moveBtn.textContent = '⤴︎ Переместить выбранный';
   }
