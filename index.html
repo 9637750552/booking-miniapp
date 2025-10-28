@@ -4,6 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Booking Form Extended</title>
+
+  <!-- 💎 Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./style.css" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -25,30 +31,69 @@
     <label for="to">Дата выезда</label>
     <input id="to" type="date" />
 
-    <!-- Количество людей -->
-    <label for="guests">Количество человек</label>
+    <!-- Количество взрослых -->
+    <label for="guests">Количество взрослых (14+)</label>
     <input id="guests" type="number" min="1" placeholder="Например, 2" />
 
-    <!-- Из них детей -->
-    <label for="children">Из них детей</label>
-    <input id="children" type="number" min="0" placeholder="Например, 1" />
+    <!-- 👶 Дети -->
+    <div class="accordion">
+      <button id="children_toggle" class="accordion-btn" type="button">
+        <span class="plus"></span> Добавить детей
+      </button>
 
-    <!-- Возраст детей -->
-    <label for="children_age">Возраст детей</label>
-    <input id="children_age" type="text" placeholder="Например, 5 и 8 лет" />
+      <div class="accordion-panel" id="children_panel" hidden>
+        <div id="children_list" class="child-list"><!-- динамические строки детей --></div>
+
+        <div class="child-controls">
+          <select id="child_age_select">
+            <option value="" selected disabled>Возраст ребёнка</option>
+            <option value="0">до 1 года</option>
+            <option value="1">1 год</option>
+            <option value="2">2 года</option>
+            <option value="3">3 года</option>
+            <option value="4">4 года</option>
+            <option value="5">5 лет</option>
+            <option value="6">6 лет</option>
+            <option value="7">7 лет</option>
+            <option value="8">8 лет</option>
+            <option value="9">9 лет</option>
+            <option value="10">10 лет</option>
+            <option value="11">11 лет</option>
+            <option value="12">12 лет</option>
+            <option value="13">13 лет</option>
+          </select>
+        </div>
+
+        <div class="hint">
+          Добавляйте по одному ребёнку. Возраст учитывается до 13 лет включительно.
+        </div>
+      </div>
+    </div>
 
     <!-- Контакты -->
     <label for="phone">Телефон для связи</label>
-    <input id="phone" type="tel" placeholder="+7 (___) ___-__-__" />
+    <input
+      id="phone"
+      type="tel"
+      placeholder="+7 (___) ___-__-__"
+      inputmode="tel"
+      autocomplete="tel"
+    />
 
     <label for="email">Адрес электронной почты</label>
-    <input id="email" type="email" placeholder="example@mail.ru" />
+    <input
+      id="email"
+      type="email"
+      placeholder="example@mail.ru"
+      inputmode="email"
+      autocomplete="email"
+    />
 
     <!-- Кнопки действий -->
-    <button id="pick_on_map" class="secondary">Выбрать участок на карте</button>
-    <button id="confirm">Подтвердить без выбора участка</button>
+    <button id="pick_on_map" class="secondary" type="button">Выбрать участок на карте</button>
+    <button id="confirm" type="button">Подтвердить без выбора участка</button>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="./app.js?v=5"></script>
 </body>
 </html>
