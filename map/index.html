@@ -2,69 +2,42 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Карта участков</title>
-
-  <!-- Leaflet core -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <!-- Leaflet.Draw -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
-  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-
-  <!-- Leaflet.PM (drag целиком выбранного полигона) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.pm@latest/dist/leaflet.pm.css"/>
-  <script src="https://unpkg.com/leaflet.pm@latest/dist/leaflet.pm.min.js"></script>
-
-  <link rel="stylesheet" href="./map.css"/>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Кемпинг — карта (SVG)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="map.css" />
 </head>
 <body>
-  <!-- Карта сверху -->
-  <div id="map" role="region" aria-label="Карта участков"></div>
-
-  <!-- Перетаскиваемый бокс снизу (стартовая позиция — центр снизу) -->
-  <div id="panel" class="draggable" role="dialog" aria-label="Панель бронирования">
-    <div class="drag-handle" title="Потянуть, чтобы переместить">⋮⋮</div>
-
-    <div class="row info">
-      <div><b>Даты:</b> <span id="dates">—</span></div>
-      <div><b>Гости:</b> <span id="guests">—</span></div>
+  <div id="toolbar">
+    <div class="group">
+      <span>Слои:</span>
+      <button data-layer="pitches_60" class="toggle on">60</button>
+      <button data-layer="pitches_80" class="toggle on">80</button>
+      <button data-layer="pitches_100" class="toggle on">100</button>
+      <button id="btn-all">Все</button>
+      <button id="btn-none">Скрыть</button>
     </div>
-
-    <div id="picked" class="picked">Участок не выбран</div>
-
-    <div class="row">
-      <button id="confirm" disabled>Подтвердить</button>
+    <div class="group">
+      <span>Прозрачность:</span>
+      <input id="opacity" type="range" min="20" max="100" value="90" />
     </div>
-
-    <hr/>
-
-    <div class="row">
-      <label class="toggle">
-        <input type="checkbox" id="drawToggle"/>
-        <span>Режим оцифровки</span>
-      </label>
-      <button id="moveSelected" class="ghost" title="Переместить выбранный контур">⤴︎ Переместить выбранный</button>
+    <div class="group">
+      <span id="status">—</span>
     </div>
-
-    <div class="row">
-      <button id="saveGeoJson"  title="Сохранить текущее в pitches.geo.json">💾 Сохранить JSON</button>
-      <button id="clearAll"     class="danger" title="Удалить все полигоны и точки">🧹 Очистить всё</button>
-    </div>
-
-    <div class="row">
-      <label>Прозрачность плана</label>
-      <input type="range" id="opacity" min="20" max="100" value="90"/>
-    </div>
-
-    <div class="hint">
-      Двойной клик по полигону — редактировать свойства (name/type/capacity/price/is_free).
-    </div>
-    <div class="coords">Коорд.: <span id="pos">—, —</span></div>
   </div>
 
-  <script src="./map.js"></script>
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="map.js"></script>
 </body>
 </html>

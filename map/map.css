@@ -1,54 +1,33 @@
-/* Карта занимает верхнюю часть экрана */
 html, body { height: 100%; margin: 0; }
-#map { height: 75vh; }
+#map { position: absolute; inset: 48px 0 0 0; }
 
-/* Перетаскиваемый бокс */
-#panel {
-  position: fixed;          /* можно таскать поверх карты */
-  left: 50%;
-  bottom: 12px;
-  transform: translateX(-50%);
-  z-index: 1100;
-
-  background: rgba(255,255,255,.96);
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.15);
-  font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  min-width: 300px;
-  max-width: min(95vw, 560px);
-  cursor: default;
+#toolbar {
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 48px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 6px 10px; background: #111; color: #fff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  z-index: 1000;
 }
+#toolbar .group { display: flex; gap: 8px; align-items: center; }
+#toolbar button, #toolbar input[type=range] {
+  font: inherit; cursor: pointer;
+}
+#toolbar button {
+  padding: 6px 10px; border: 1px solid #333; background: #222; color: #fff; border-radius: 6px;
+}
+#toolbar button.toggle.on { background: #2e7d32; border-color: #195a1c; }
+#toolbar button.toggle.off { background: #6b2b2b; border-color: #4a1a1a; }
 
-.drag-handle {
-  cursor: grab;
+.leaflet-overlay-pane svg svg { /* наш встроенный мастер-SVG */
+  pointer-events: visiblePainted; /* чтобы ловить hover/click */
   user-select: none;
-  text-align: center;
-  color: #9ca3af;
-  font-size: 18px;
-  line-height: 1;
-  margin: -6px 0 6px;
 }
-.drag-handle:active { cursor: grabbing; }
 
-.row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
-.row.info { justify-content: space-between; }
-.picked { font-weight: 600; margin-top: 6px; }
+/* Подсветка питча */
+svg .pitch.hover   { filter: drop-shadow(0 0 2px rgba(0,0,0,.4)); opacity: 0.9; }
+svg .pitch.selected{ outline: 2px solid #ff9800; outline-offset: 2px; }
+svg .pitch { transition: opacity .12s ease; cursor: pointer; }
 
-button { padding: 6px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer; }
-button:hover { background: #f3f4f6; }
-button[disabled] { opacity: .6; cursor: not-allowed; }
-button.danger { border-color: #fecaca; color: #b91c1c; }
-button.danger:hover { background: #fee2e2; }
-button.ghost { color: #374151; }
-hr { border: none; border-top: 1px solid #e5e7eb; margin: 10px 0; }
-
-.toggle { display: inline-flex; gap: 8px; align-items: center; }
-.hint   { font-size: 12px; color: #6b7280; margin-top: 6px; max-width: 520px; }
-.coords { font-size: 12px; color: #374151; margin-top: 6px; }
-
-/* тулбар Leaflet.Draw поверх */
-.leaflet-control-container .leaflet-draw { z-index: 1200; }
-
-/* подписи на участках */
-.leaflet-tooltip { font-weight: 600; }
+/* Когда слой скрыт */
+svg g.layer-hidden { display: none !important; }

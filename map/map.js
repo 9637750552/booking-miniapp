@@ -1,261 +1,136 @@
-/* === Параметры из URL (даты/гости) === */
-const q = new URLSearchParams(location.search);
-const from   = q.get('from') || '';
-const to     = q.get('to')   || '';
-const guests = Number(q.get('guests') || 1);
+// ===== НАСТРОЙКА =====
+const SVG_URL = 'assets/masterplan.svg'; // твой файл
+const LAYER_LABELS = ['pitches_60', 'pitches_80', 'pitches_100']; // имена слоёв в SVG
 
-/* === Telegram WebApp === */
-const tg = window.Telegram?.WebApp; tg?.expand?.();
-
-/* === Панель === */
-document.getElementById('dates').textContent  = (from && to) ? `${from} → ${to}` : '—';
-document.getElementById('guests').textContent = guests || '—';
-const pickedEl   = document.getElementById('picked');
-const confirmBtn = document.getElementById('confirm');
-const drawToggle = document.getElementById('drawToggle');
-const saveBtn    = document.getElementById('saveGeoJson');
-const clearBtn   = document.getElementById('clearAll');
-const posEl      = document.getElementById('pos');
-const opacityInp = document.getElementById('opacity');
-const moveBtn    = document.getElementById('moveSelected');
-confirmBtn.disabled = true;
-
-/* === Перетаскивание нижнего бокса === */
-makeDraggablePanel(document.getElementById('panel'), document.querySelector('#panel .drag-handle'));
-function makeDraggablePanel(panel, handle){
-  let dragging = false, sx=0, sy=0, sl=0, st=0;
-  const down = (e) => {
-    dragging = true;
-    panel.style.transition = 'none';
-    panel.style.left = panel.offsetLeft + 'px';
-    panel.style.top  = panel.offsetTop  + 'px';
-    panel.style.transform = 'none';
-    sx = e.clientX; sy = e.clientY; sl = panel.offsetLeft; st = panel.offsetTop;
-    handle.setPointerCapture(e.pointerId);
-  };
-  const move = (e) => { if(!dragging) return; panel.style.left = (sl + e.clientX - sx) + 'px'; panel.style.top = (st + e.clientY - sy) + 'px'; };
-  const up   = (e) => { dragging = false; try{handle.releasePointerCapture(e.pointerId);}catch{} };
-  handle.addEventListener('pointerdown', down);
-  handle.addEventListener('pointermove', move);
-  handle.addEventListener('pointerup',   up);
-}
-
-/* === Карта === */
+// ===== КАРТА =====
 const map = L.map('map', {
   crs: L.CRS.Simple,
-  minZoom: -2, maxZoom: 2, zoomSnap: 0.25, zoomDelta: 0.5,
-  inertia: true, worldCopyJump: false
+  zoomControl: true,
+  minZoom: -3,
 });
 
-let overlay = null;
-loadImage('../assets/masterplan.png').then(({src, width, height}) => {
-  const bounds = [[0,0],[height, width]];
-  overlay = L.imageOverlay(src, bounds, { opacity: Number(opacityInp.value)/100 }).addTo(map);
+let svgRoot = null;
+let svgOverlay = null;
+
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const statusEl = $('#status');
+const opacityInp = $('#opacity');
+
+// ===== ЗАГРУЗКА SVG В OVERLAY =====
+init();
+
+async function init() {
+  const text = await fetch(SVG_URL + cacheBust()).then(r => r.text());
+  const doc  = new DOMParser().parseFromString(text, 'image/svg+xml');
+  svgRoot    = doc.documentElement;
+
+  // Проверяем viewBox
+  const vb = svgRoot.getAttribute('viewBox');
+  if (!vb) throw new Error('В SVG нужен viewBox="minX minY width height".');
+
+  const [minX, minY, width, height] = vb.split(/\s+/).map(Number);
+  const bounds = [[0,0], [height, width]];
+
+  // Вставляем как overlay
+  svgOverlay = L.svgOverlay(svgRoot, bounds, { opacity: opacityInp.value/100 }).addTo(map);
   map.fitBounds(bounds);
-  map.on('mousemove', (e) => { posEl.textContent = `${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}`; });
-  loadPitches();
-});
 
-function loadImage(url){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ src: url, width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = reject;
-    img.src = url + ((/\?/).test(url) ? '&' : '?') + 'v=' + Date.now();
+  // Навесим интерактив
+  prepareSvg(svgRoot);
+
+  // UI-кнопки
+  bindUI();
+  setStatus('Готово');
+}
+
+function cacheBust() {
+  return (SVG_URL.includes('?') ? '&' : '?') + 'v=' + Date.now();
+}
+
+// ===== ПОДГОТОВКА ВНУТРИ SVG =====
+function prepareSvg(svg) {
+  // 1) Пометим все фигуры-питчи классом .pitch (path, polygon, rect, circle — на всякий)
+  const pitchSelectors = LAYER_LABELS.map(lbl => groupSelector(lbl) + ' path, ' + groupSelector(lbl) + ' polygon, ' + groupSelector(lbl) + ' rect, ' + groupSelector(lbl) + ' circle').join(', ');
+  const shapes = $$(pitchSelectors, svg);
+
+  shapes.forEach(el => {
+    el.classList.add('pitch');
+    el.addEventListener('mouseenter', () => el.classList.add('hover'));
+    el.addEventListener('mouseleave', () => el.classList.remove('hover'));
+    el.addEventListener('click', (ev) => onPitchClick(ev, el));
+  });
+
+  // 2) Слои по-умолчанию включены
+  LAYER_LABELS.forEach(lbl => setLayerVisible(lbl, true));
+}
+
+// Поддержка разных вариантов метки слоя
+function groupSelector(label) {
+  // ищем <g inkscape:label="..."> ИЛИ id="..." ИЛИ sodipodi:label="..."
+  return `g[inkscape\\:label="${label}"], g#${cssEscape(label)}, g[sodipodi\\:label="${label}"]`;
+}
+
+function findLayerGroups(label) {
+  if (!svgRoot) return [];
+  return $$(groupSelector(label), svgRoot);
+}
+
+function setLayerVisible(label, visible) {
+  const groups = findLayerGroups(label);
+  groups.forEach(g => g.classList.toggle('layer-hidden', !visible));
+}
+
+function cssEscape(id) {
+  // примитивное экранирование для селектора id
+  return id.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+}
+
+// ===== ОБРАБОТЧИК КЛИКА ПО ПИТЧУ =====
+function onPitchClick(ev, el) {
+  // переключаем выделение
+  el.classList.toggle('selected');
+
+  const id   = el.getAttribute('id') || '(без id)';
+  const fill = el.getAttribute('fill') || getComputedStyle(el).fill || '';
+  const msg  = `Питч: ${id}  |  selected=${el.classList.contains('selected')}  |  fill=${fill}`;
+  setStatus(msg);
+  // здесь можно дернуть свою логику (панель, форма и т.п.)
+}
+
+// ===== UI ПАНЕЛЬ =====
+function bindUI() {
+  // Переключатели слоёв
+  $$('.toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const label = btn.dataset.layer;
+      const isOn  = btn.classList.contains('on');
+      setLayerVisible(label, !isOn);
+      btn.classList.toggle('on', !isOn);
+      btn.classList.toggle('off', isOn);
+    });
+  });
+
+  // Все / Скрыть
+  $('#btn-all').addEventListener('click', () => {
+    LAYER_LABELS.forEach(lbl => setLayerVisible(lbl, true));
+    $$('.toggle').forEach(b => b.classList.add('on')); 
+    $$('.toggle').forEach(b => b.classList.remove('off'));
+  });
+  $('#btn-none').addEventListener('click', () => {
+    LAYER_LABELS.forEach(lbl => setLayerVisible(lbl, false));
+    $$('.toggle').forEach(b => b.classList.remove('on'));
+    $$('.toggle').forEach(b => b.classList.add('off'));
+  });
+
+  // Прозрачность
+  opacityInp.addEventListener('input', () => {
+    if (!svgOverlay) return;
+    const v = Number(opacityInp.value)/100;
+    // два варианта: через setOpacity у overlay И/ИЛИ style.opacity у <svg>
+    svgOverlay.setOpacity(v);
+    if (svgRoot) svgRoot.style.opacity = v;
   });
 }
 
-/* === Слой участков === */
-let selectedLayer = null;
-let draggingLayer = null;   // у какого слоя сейчас активен layerDrag
-let moveMode = false;       // включён ли режим переноса целиком
-
-const layerPolygons = L.geoJSON(null, {
-  style: f => ({
-    color: f?.properties?.is_free ? '#22c55e' : '#9ca3af',
-    weight: 2,
-    fillOpacity: 0.35
-  }),
-  onEachFeature: (f, layer) => {
-    if (f?.properties?.label) layer.bindTooltip(f.properties.label, { direction:'top', offset:[0,-6] });
-    layer.on('click', () => selectLayer(f, layer));
-    layer.on('dblclick', () => editProps(layer));
-  }
-}).addTo(map);
-
-function loadPitches(){
-  fetch('./pitches.geo.json')
-    .then(r => r.json())
-    .then(data => {
-      layerPolygons.addData(data);
-      const b = layerPolygons.getBounds();
-      if (b.isValid()) map.fitBounds(b.pad(0.1));
-      console.log('✅ Pitches loaded:', (data.features || []).length);
-    })
-    .catch(err => console.error('pitches load error', err));
-}
-
-/* === Выбор участка === */
-function selectLayer(feature, layer) {
-  // если в режиме переноса — перевешиваем drag на новый слой
-  if (moveMode) setLayerDrag(layer);
-
-  selectedLayer = layer;
-  const p = (feature && feature.properties) || {};
-  pickedEl.textContent = `Выбрано: ${p.name || p.id} (${p.type || ''})`;
-  confirmBtn.disabled = !Boolean(p.is_free);
-  layerPolygons.resetStyle();
-  layer.setStyle({ color:'#2563eb', weight:3, fillOpacity: .45 });
-}
-
-/* === Отправка выбора в бота === */
-confirmBtn.addEventListener('click', () => {
-  if (!selectedLayer) return;
-  const p = selectedLayer.feature?.properties || {};
-  tg?.sendData?.(JSON.stringify({
-    from, to, guests,
-    pitch_id: p.id, pitch_name: p.name || null, pitch_type: p.type || null
-  }));
-});
-
-/* === Включение/выключение поведения карты на время drag === */
-function disableMapInteractions(){
-  map.dragging.disable();
-  map.doubleClickZoom.disable();
-  map.boxZoom.disable();
-  map.keyboard.disable();
-}
-function enableMapInteractions(){
-  map.dragging.enable();
-  map.doubleClickZoom.enable();
-  map.boxZoom.enable();
-  map.keyboard.enable();
-}
-
-/* === Назначить drag для конкретного слоя (без вершин!) === */
-function setLayerDrag(layer){
-  // отключим drag у предыдущего
-  if (draggingLayer && draggingLayer !== layer) {
-    try { draggingLayer.pm.disableLayerDrag(); } catch {}
-    removeDragGuards(draggingLayer);
-  }
-
-  draggingLayer = layer;
-
-  // выключаем «редактирование вершин» на всякий случай
-  try { layer.pm.disable(); } catch {}
-
-  // ВКЛЮЧАЕМ ПЕРЕНОС ВСЕЙ ФИГУРЫ
-  try { layer.pm.enableLayerDrag(); } catch {} // <-- ключевая строка
-
-  attachDragGuards(layer);
-}
-
-function attachDragGuards(layer){
-  // не даём событиям стартовать панораму карты
-  const stop = (e) => { if(!moveMode) return; if(e.originalEvent){ e.originalEvent.preventDefault(); e.originalEvent.stopPropagation(); } L.DomEvent.stop(e); };
-  layer.off('mousedown touchstart pointerdown', stop);
-  layer.on('mousedown touchstart pointerdown', stop);
-
-  // при начале/окончании перетаскивания — выключаем/включаем поведение карты
-  layer.off('pm:dragstart'); layer.off('pm:dragend');
-  layer.on('pm:dragstart', () => disableMapInteractions());
-  layer.on('pm:dragend',   () => enableMapInteractions());
-}
-
-function removeDragGuards(layer){
-  layer.off('mousedown'); layer.off('touchstart'); layer.off('pointerdown');
-  layer.off('pm:dragstart'); layer.off('pm:dragend');
-}
-
-/* === Кнопка режима переноса === */
-moveBtn.addEventListener('click', () => {
-  if (!selectedLayer) {
-    alert('Сначала выберите участок кликом.');
-    return;
-  }
-  moveMode = !moveMode;
-
-  if (moveMode) {
-    setLayerDrag(selectedLayer);
-    disableMapInteractions();              // чтобы карта не дёрнулась на первый пик
-    moveBtn.classList.add('active');
-    moveBtn.textContent = '⤴︎ Готово (выкл. перенос)';
-  } else {
-    try { selectedLayer.pm.disableLayerDrag(); } catch {}
-    enableMapInteractions();
-    removeDragGuards(selectedLayer);
-    moveBtn.classList.remove('active');
-    moveBtn.textContent = '⤴︎ Переместить выбранный';
-  }
-});
-
-/* === Режим оцифровки (Leaflet.Draw) === */
-let drawControl = null;
-drawToggle.addEventListener('change', (e) => e.target.checked ? enableDraw() : disableDraw());
-
-function enableDraw() {
-  if (drawControl) return;
-  drawControl = new L.Control.Draw({
-    position: 'topright',
-    draw: {
-      polygon:   { allowIntersection:false, showArea:false },
-      rectangle: true,
-      marker:    true,
-      polyline:  false, circle:false, circlemarker:false
-    },
-    edit: { featureGroup: layerPolygons }
-  });
-  map.addControl(drawControl);
-
-  map.on(L.Draw.Event.CREATED, e => {
-    const layer = e.layer;
-    const nextId = getNextId();
-    const baseProps = { id: nextId, name: `NEW-${nextId}`, type: "tent-60", capacity: 4, price: 1500, is_free: true, label: `N${nextId}` };
-    layer.feature = layer.feature || { type:'Feature', properties:{}, geometry:{} };
-    layer.feature.properties = { ...baseProps };
-    layerPolygons.addLayer(layer);
-    selectLayer(layer.feature, layer);
-  });
-
-  map.on(L.Draw.Event.EDITED, () => { if (selectedLayer) selectLayer(selectedLayer.feature, selectedLayer); });
-}
-function disableDraw() {
-  if (!drawControl) return;
-  map.removeControl(drawControl);
-  map.off(L.Draw.Event.CREATED);
-  map.off(L.Draw.Event.EDITED);
-  drawControl = null;
-}
-
-/* === Редактирование свойств по даблклику === */
-function editProps(layer) {
-  const p = layer.feature?.properties || {};
-  const name     = prompt("name:", p.name ?? "") ?? p.name ?? null;
-  const type     = prompt("type (tent-60/rv-80/rv-100/facility):", p.type ?? "") ?? p.type ?? null;
-  const capacity = Number(prompt("capacity:", p.capacity ?? 0) ?? p.capacity ?? 0);
-  const price    = Number(prompt("price:", p.price ?? 0) ?? p.price ?? 0);
-  const isFree   = prompt("is_free (true/false):", String(p.is_free ?? true)).toLowerCase() !== "false";
-
-  layer.feature.properties = { ...p, name, type, capacity, price, is_free: isFree, label: name || p.label };
-  layer.setStyle && layer.setStyle({ color: isFree ? '#22c55e' : '#9ca3af' });
-  selectLayer(layer.feature, layer);
-}
-
-/* === Сохранить/Очистить === */
-saveBtn.addEventListener('click', () => downloadJSON(layerPolygons.toGeoJSON(), 'pitches.geo.json'));
-clearBtn.addEventListener('click', () => { if (confirm('Удалить все полигоны и точки?')) layerPolygons.clearLayers(); });
-
-/* === Прозрачность подложки === */
-opacityInp.addEventListener('input', () => { if (overlay) overlay.setOpacity(Number(opacityInp.value)/100); });
-
-/* === Вспомогательное === */
-function getNextId() {
-  let maxId = 1000;
-  layerPolygons.eachLayer(l => { const id = l?.feature?.properties?.id; if (typeof id === 'number' && id > maxId) maxId = id; });
-  return maxId + 1;
-}
-function downloadJSON(obj, filename){
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-}
+function setStatus(t) { statusEl.textContent = t; }
