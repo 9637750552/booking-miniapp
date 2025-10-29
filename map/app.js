@@ -47,18 +47,17 @@ async function init() {
 }
 
 // === ПОМОЩЬ ===
-function setStatus(t){ if(statusEl) statusEl.textContent = t; }
+function setStatus(t){ if (statusEl) statusEl.innerHTML = t; }
 function getLabelFrom(el){
-  // имя: data-name > id > ближайшая группа label
   const id = el.getAttribute('id') || '';
   const dataName = el.dataset.name || '';
-  const parentLabel = el.closest('g') && (
-    el.closest('g').getAttribute('inkscape:label') ||
-    el.closest('g').getAttribute('sodipodi:label') ||
-    el.closest('g').id || ''
+  const parent = el.closest('g');
+  const parentLabel = parent && (
+    parent.getAttribute('inkscape:label') ||
+    parent.getAttribute('sodipodi:label') ||
+    parent.id || ''
   ) || '';
   const name = dataName || id || parentLabel || 'объект';
-  // номер — хвост цифр в id (например pitch_a12 -> 12)
   const m = (id||'').match(/(\d+)(?!.*\d)/);
   const num = m ? m[1] : '';
   return { name, num, id };
@@ -70,10 +69,7 @@ function showTooltip(text, x, y){
   tooltipEl.hidden = false;
 }
 function hideTooltip(){ tooltipEl.hidden = true; }
-function showConfirm(name){
-  cpNameEl.textContent = name;
-  cpEl.hidden = false;
-}
+function showConfirm(name){ cpNameEl.textContent = name; cpEl.hidden = false; }
 function hideConfirm(){ cpEl.hidden = true; }
 
 // === ВСПОМОГАТЕЛЬНЫЕ ДЛЯ SVG ===
@@ -161,7 +157,7 @@ function prepareSvg(svg){
     }
     const target = hit || el;
 
-    // hover tooltip
+    // tooltip по ховеру
     target.addEventListener('mousemove', (ev)=>{
       const {name, num} = getLabelFrom(el);
       const label = num ? `${name} №${num}` : name;
@@ -187,12 +183,13 @@ function prepareSvg(svg){
       const on = el.dataset.sel !== '1';
       el.dataset.sel = on ? '1' : '0';
 
-      // снять старую подсветку
+      // убрать старую подсветку
       if (el.dataset.selCloneId){
         const old = document.getElementById(el.dataset.selCloneId);
         if (old) old.remove();
         delete el.dataset.selCloneId;
       }
+
       if (on){
         const sel = makeHighlightClone(el, '#ff9800');
         const cid = '__sel__'+Math.random().toString(36).slice(2);
@@ -202,20 +199,21 @@ function prepareSvg(svg){
 
         selectedEl = el;
         const {name, num, id} = getLabelFrom(el);
-        const label = num ? `${name} №${num}` : name || id;
+        const label = num ? `${name} №${num}` : (name || id);
+
         showConfirm(label);
-        setStatus(`Выбрано: ${label}`);
+        setStatus(`<b>Объект:</b> ${label}<br><b>Слой:</b> ${el.dataset.layer} — выбран`);
       } else {
         selectedEl = null;
         hideConfirm();
-        setStatus('Снято');
+        setStatus(`<b>Объект:</b> —<br><b>Слой:</b> ${el.dataset.layer} — снят`);
       }
     });
 
     attached++;
   });
 
-  setStatus(`${statusEl.textContent} | кликабельно: ${attached}`);
+  setStatus(`${statusEl.innerHTML} <br><b>Кликабельно:</b> ${attached}`);
 }
 
 // === UI КНОПКИ ===
@@ -234,6 +232,7 @@ function bindUI(){
     LAYER_LABELS.forEach(l => setLayerVisible(l, true));
     $$('.toggle').forEach(b=>{ b.classList.add('on'); b.classList.remove('off'); });
   });
+
   $('#btn-none')?.addEventListener('click', ()=>{
     LAYER_LABELS.forEach(l => setLayerVisible(l, false));
     $$('.toggle').forEach(b=>{ b.classList.remove('on'); b.classList.add('off'); });
@@ -245,11 +244,10 @@ function bindUI(){
     if (svgRoot) svgRoot.style.opacity = v;
   });
 
-  // confirm bar actions
+  // Панель подтверждения
   $('#cp-cancel')?.addEventListener('click', ()=>{
     hideConfirm();
     if (selectedEl){
-      // снять выделение
       selectedEl.dataset.sel='0';
       if (selectedEl.dataset.selCloneId){
         const old = document.getElementById(selectedEl.dataset.selCloneId);
@@ -269,14 +267,12 @@ function bindUI(){
       params: getAllParams()
     };
 
-    // Telegram Mini App?
     const tg = window.Telegram && window.Telegram.WebApp;
     if (tg && typeof tg.sendData === 'function'){
       tg.HapticFeedback?.impactOccurred?.('light');
       tg.sendData(JSON.stringify(payload));
       tg.close?.();
     } else {
-      // fallback: уведомление (или редирект по ?back=)
       alert('Выбор отправлен: ' + JSON.stringify(payload, null, 2));
       const back = new URLSearchParams(location.search).get('back');
       if (back) location.href = back;
@@ -287,12 +283,10 @@ function bindUI(){
 // === ПОКАЗ/СКРЫТИЕ СЛОЁВ ===
 function setLayerVisible(label, visible){
   const esc = CSS.escape(label);
-  // оригиналы — по data-layer у фигур
   $$( `[data-layer="${esc}"]`, svgRoot ).forEach(el=>{
     if (el.dataset.hit === '1'){ el.style.display = visible ? '' : 'none'; }
     else { el.classList.toggle('layer-hidden', !visible); }
   });
-  // hit-клоны
   $$( `[data-layer="${esc}"]`, getHitLayer() ).forEach(el=>{
     el.style.display = visible ? '' : 'none';
   });
