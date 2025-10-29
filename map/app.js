@@ -1,6 +1,6 @@
 // === НАСТРОЙКИ ===
 const SVG_URL = 'assets/masterplan.svg';
-// Разрешаем интерактив только для слоёв питчей:
+// интерактив только для питчей
 const PITCH_LAYERS = ['pitches_60','pitches_80','pitches_100'];
 
 // === КАРТА ===
@@ -12,7 +12,7 @@ let svgOverlay = null;
 const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
-// UI ссылки
+// UI
 const tooltipEl   = $('#tooltip');
 const selectedLbl = $('#selected-label');
 const btnCancel   = $('#cp-cancel');
@@ -56,7 +56,7 @@ function wireUI(){
   const back = new URLSearchParams(location.search).get('back') || '../index.html';
   $('#back-btn').addEventListener('click', ()=>location.href = back);
 
-  // три кнопки питчей
+  // три кнопки питчей (показ/скрытие)
   $$('.toggle[data-layer]').forEach(btn=>{
     const layer = btn.dataset.layer;
     btn.addEventListener('click', ()=>{
@@ -82,7 +82,6 @@ function renderBookingSummary(){
   const el = $('#booking-summary');
   const p = getParams();
 
-  // куча синонимов
   const getFirst = (...keys)=>keys.find(k=>p[k]!=null && p[k] !== '');
   const ciKey = getFirst('checkin','date_from','from','arrival','start','checkin_date','check_in','dateStart','start_date');
   const coKey = getFirst('checkout','date_to','to','departure','end','checkout_date','check_out','dateEnd','end_date');
@@ -191,8 +190,9 @@ function prepareSvg(svg){
     }
     const target = hit || el;
 
-    // защита от «перетаскивания»
+    // считаем «кликом» только короткое нажатие без сдвига — тогда не даём Leaflet перехватывать событие
     let downPos = null;
+
     target.addEventListener('pointerdown', (ev)=>{
       downPos = {x: ev.clientX, y: ev.clientY};
     }, {passive:true});
@@ -223,14 +223,23 @@ function prepareSvg(svg){
 
     // выбор — pointerup (мышь/тач)
     target.addEventListener('pointerup', (ev)=>{
+      // определяем «клик»
+      let isClick = true;
       if (downPos) {
         const dx = Math.abs(ev.clientX - downPos.x);
         const dy = Math.abs(ev.clientY - downPos.y);
-        if (dx > 6 || dy > 6) return; // перетаскивали — игнор
+        if (dx > 6 || dy > 6) isClick = false;
       }
+      downPos = null;
+
+      if (!isClick) return; // жест перетаскивания — не трогаем, пусть карта скроллится
+
+      // это «клик»: не даём карте его перехватить
+      ev.stopPropagation();
+      ev.preventDefault();
 
       const isSame = selectedEl === el;
-      if (isSame) {            // повторный клик по тому же — снять
+      if (isSame) {            // повторный клик по выбранному — снять
         clearSelection();
         return;
       }
@@ -250,6 +259,9 @@ function prepareSvg(svg){
       selectedLbl.textContent = getReadableLabel(el);
       btnOk.disabled = btnCancel.disabled = false;
     });
+
+    // на случай отмены системы
+    target.addEventListener('pointercancel', ()=>{ downPos = null; });
   });
 }
 
