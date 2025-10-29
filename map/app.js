@@ -112,7 +112,7 @@ function makeHitClone(el){
   c.dataset.hit='1';
   return c;
 }
-function makeHighlightClone(el, color='#ff9800'){
+function makeHighlightClone(el, color='#ff3b30'){
   const c = el.cloneNode(true);
   c.removeAttribute('id');
   if (c.tagName !== 'use') c.setAttribute('fill','none');
@@ -129,7 +129,7 @@ function prepareSvg(svg){
   const selLayer = getSelectionLayer();
   const hitLayer = getHitLayer();
 
-  // найти слои по именам (расширенно)
+  // найти слои по именам
   const allGroups = Array.from(svg.querySelectorAll('g'));
   const groups = allGroups.filter(g=>{
     const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
@@ -165,10 +165,10 @@ function prepareSvg(svg){
     });
     target.addEventListener('mouseleave', hideTooltip);
 
-    // hover highlight
+    // hover highlight (светло-красный)
     target.addEventListener('mouseenter', ()=>{
       if (el.dataset.sel==='1') return;
-      const hov = makeHighlightClone(el, '#ffb74d');
+      const hov = makeHighlightClone(el, '#ff9aa0');
       hov.id='__hover__';
       getSelectionLayer().appendChild(hov);
     });
@@ -177,11 +177,13 @@ function prepareSvg(svg){
       if (prev) prev.remove();
     });
 
-    // click select
+    // click select / unselect
     target.addEventListener('click', (ev)=>{
       ev.stopPropagation();
-      const on = el.dataset.sel !== '1';
-      el.dataset.sel = on ? '1' : '0';
+
+      const nowSelected = el.dataset.sel === '1';
+      const turnOn = !nowSelected;
+      el.dataset.sel = turnOn ? '1' : '0';
 
       // убрать старую подсветку
       if (el.dataset.selCloneId){
@@ -190,8 +192,9 @@ function prepareSvg(svg){
         delete el.dataset.selCloneId;
       }
 
-      if (on){
-        const sel = makeHighlightClone(el, '#ff9800');
+      if (turnOn){
+        // выделяем красным
+        const sel = makeHighlightClone(el, '#ff3b30');
         const cid = '__sel__'+Math.random().toString(36).slice(2);
         sel.id = cid;
         getSelectionLayer().appendChild(sel);
@@ -204,8 +207,10 @@ function prepareSvg(svg){
         showConfirm(label);
         setStatus(`<b>Объект:</b> ${label}<br><b>Слой:</b> ${el.dataset.layer} — выбран`);
       } else {
+        // повторный клик — снять выделение
         selectedEl = null;
         hideConfirm();
+        hideTooltip();
         setStatus(`<b>Объект:</b> —<br><b>Слой:</b> ${el.dataset.layer} — снят`);
       }
     });
