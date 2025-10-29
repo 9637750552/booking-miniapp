@@ -2,66 +2,65 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>GoNature — Карта выбора места</title>
+  <title>GoNature — Выбор места на карте</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <div id="toolbar">
-    <div class="toolbar-left">
-      <span class="toolbar-label">Слои:</span>
+  <!-- Верхняя компакт-панель -->
+  <header id="topbar">
+    <div class="left">
+      <div class="primary-layers">
+        <button class="toggle on" data-layer="pitches_60">60</button>
+        <button class="toggle on" data-layer="pitches_80">80</button>
+        <button class="toggle on" data-layer="pitches_100">100</button>
+      </div>
 
-      <!-- pitches -->
-      <button class="toggle on" data-layer="pitches_60">60</button>
-      <button class="toggle on" data-layer="pitches_80">80</button>
-      <button class="toggle on" data-layer="pitches_100">100</button>
-
-      <!-- service layers -->
-      <button class="toggle on" data-layer="sanitary">sanitary</button>
-      <button class="toggle on" data-layer="admin">admin</button>
-      <button class="toggle on" data-layer="playground">playground</button>
-      <button class="toggle on" data-layer="roads">roads</button>
-      <button class="toggle on" data-layer="border">border</button>
-
-      <button id="btn-all"   class="ghost">Все</button>
-      <button id="btn-none"  class="ghost">Скрыть</button>
-
-      <label class="opacity-wrap">
-        Прозрачность:
-        <input id="opacity" type="range" min="30" max="100" value="90" />
-      </label>
-
-      <a id="back-link" href="../index.html" class="ghost">← Назад к форме</a>
+      <!-- Горизонтальный скролл остальных слоёв -->
+      <div class="more-layers" id="more-layers">
+        <button class="toggle on" data-layer="sanitary">sanitary</button>
+        <button class="toggle on" data-layer="admin">admin</button>
+        <button class="toggle on" data-layer="playground">playground</button>
+        <button class="toggle on" data-layer="roads">roads</button>
+        <button class="toggle on" data-layer="border">border</button>
+      </div>
     </div>
 
-    <div class="toolbar-right">
-      <div id="params" title="Параметры бронирования">Ваш выбор: —</div>
-      <span id="status">—</span>
+    <div class="right">
+      <a id="back-link" class="link">← Назад</a>
+      <div class="zoom">
+        <button id="zoom-in"  aria-label="Приблизить">+</button>
+        <button id="zoom-out" aria-label="Отдалить">−</button>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <div id="map"></div>
+  <!-- Карта -->
+  <main id="map"></main>
 
-  <!-- всплывающая подсказка -->
+  <!-- Тонкий tooltip по ховеру -->
   <div id="tooltip" hidden></div>
 
-  <!-- панель подтверждения выбора -->
-  <div id="confirm-panel" hidden>
-    <div class="cp-title">Вы выбрали:</div>
-    <div class="cp-name" id="cp-name">—</div>
-    <div class="cp-actions">
-      <button id="cp-cancel" class="ghost">Отмена</button>
-      <button id="cp-ok" class="primary">Подтвердить</button>
+  <!-- Нижняя панель выбора -->
+  <footer id="bottombar">
+    <div class="row">
+      <div class="chosen">
+        <span class="muted">Вы выбрали:</span>
+        <span id="selected-label">—</span>
+      </div>
+      <div class="actions">
+        <button id="cp-cancel" class="ghost" disabled>Отмена</button>
+        <button id="cp-ok" class="primary" disabled>Подтвердить</button>
+      </div>
     </div>
-  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <div class="row secondary">
+      <div id="booking-summary" class="muted">Даты бронирования: —</div>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
   <script src="app.js"></script>
 </body>
 </html>

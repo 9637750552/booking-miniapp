@@ -1,78 +1,97 @@
-// === КОНСТАНТЫ ===
+// === НАСТРОЙКИ ===
 const SVG_URL = 'assets/masterplan.svg';
 const LAYER_LABELS = [
   'pitches_60','pitches_80','pitches_100',
   'sanitary','admin','playground','roads','border'
 ];
 
-const map = L.map('map', { crs: L.CRS.Simple, zoomControl: true, minZoom: -4 });
+// === КАРТА ===
+const map = L.map('map', { crs: L.CRS.Simple, zoomControl: false, minZoom: -4 });
 let svgRoot = null;
 let svgOverlay = null;
 
 const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-const statusEl = $('#status');
-const opacityInp = $('#opacity');
-const tooltipEl = $('#tooltip');
-const cpEl = $('#confirm-panel');
-const cpNameEl = $('#cp-name');
-let selectedEl = null; // последний выбранный объект
 
-// === ИНИЦИАЛИЗАЦИЯ ===
-init().catch(err => setStatus('❌ ' + err.message));
-renderParamsSummary();
+const tooltipEl   = $('#tooltip');
+const selectedLbl = $('#selected-label');
+const btnCancel   = $('#cp-cancel');
+const btnOk       = $('#cp-ok');
 
-async function init() {
-  setStatus('Загружаю SVG…');
+let selectedEl = null;
+
+// init
+init().then(()=>{
+  wireUI();
+  renderBookingSummary();
+}).catch(err => console.error(err));
+
+async function init(){
   const r = await fetch(SVG_URL + '?v=' + Date.now());
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  if (!r.ok) throw new Error(`SVG load error: ${r.status}`);
   const text = await r.text();
 
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
-  if (doc.querySelector('parsererror')) throw new Error('SVG повреждён');
+  if (doc.querySelector('parsererror')) throw new Error('SVG parse error');
 
   svgRoot = doc.documentElement;
   const vb = svgRoot.getAttribute('viewBox');
-  if (!vb) throw new Error('Нет viewBox');
-  const [, , width, height] = vb.split(/\s+/).map(Number);
-  const bounds = [[0,0],[height,width]];
+  if (!vb) throw new Error('No viewBox in SVG');
+  const [ , , w, h ] = vb.split(/\s+/).map(Number);
 
-  svgOverlay = L.svgOverlay(svgRoot, bounds, { opacity: 0.9 }).addTo(map);
+  const bounds = [[0,0],[h,w]];
+  svgOverlay = L.svgOverlay(svgRoot, bounds, { opacity: 0.98 }).addTo(map);
   map.fitBounds(bounds);
 
   prepareSvg(svgRoot);
-  bindUI();
-
-  setStatus(`SVG OK: ${Math.round(width)}×${Math.round(height)}`);
 }
 
-// === ПОМОЩЬ ===
-function setStatus(t){ if (statusEl) statusEl.innerHTML = t; }
-function getLabelFrom(el){
-  const id = el.getAttribute('id') || '';
-  const dataName = el.dataset.name || '';
-  const parent = el.closest('g');
-  const parentLabel = parent && (
-    parent.getAttribute('inkscape:label') ||
-    parent.getAttribute('sodipodi:label') ||
-    parent.id || ''
-  ) || '';
-  const name = dataName || id || parentLabel || 'объект';
-  const m = (id||'').match(/(\d+)(?!.*\d)/);
-  const num = m ? m[1] : '';
-  return { name, num, id };
-}
-function showTooltip(text, x, y){
-  tooltipEl.textContent = text;
-  tooltipEl.style.left = x + 'px';
-  tooltipEl.style.top = y + 'px';
-  tooltipEl.hidden = false;
-}
-function hideTooltip(){ tooltipEl.hidden = true; }
-function showConfirm(name){ cpNameEl.textContent = name; cpEl.hidden = false; }
-function hideConfirm(){ cpEl.hidden = true; }
+// === UI ===
+function wireUI(){
+  // zoom
+  $('#zoom-in').addEventListener('click', ()=>map.zoomIn());
+  $('#zoom-out').addEventListener('click', ()=>map.zoomOut());
 
-// === ВСПОМОГАТЕЛЬНЫЕ ДЛЯ SVG ===
+  // back link — если есть ?back= в URL, используем его
+  const backParam = new URLSearchParams(location.search).get('back');
+  const backLink = $('#back-link');
+  backLink.href = backParam || '../index.html';
+
+  // layer toggles
+  $$('.toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const lbl = btn.dataset.layer;
+      const isOn = btn.classList.contains('on');
+      setLayerVisible(lbl, !isOn);
+      btn.classList.toggle('on', !isOn);
+      btn.classList.toggle('off', isOn);
+    });
+  });
+
+  // confirm bar actions
+  btnCancel.addEventListener('click', clearSelection);
+  btnOk.addEventListener('click', submitSelection);
+}
+
+// === BOOKING INFO ===
+function getParams(){
+  const p = {};
+  for (const [k,v] of new URLSearchParams(location.search).entries()) p[k]=v;
+  return p;
+}
+function renderBookingSummary(){
+  const el = $('#booking-summary');
+  const p = getParams();
+  const parts = [];
+  if (p.checkin || p.date_from) parts.push(`Заезд: ${p.checkin || p.date_from}`);
+  if (p.checkout || p.date_to) parts.push(`Выезд: ${p.checkout || p.date_to}`);
+  if (p.guests) parts.push(`Гостей: ${p.guests}`);
+  if (p.adults) parts.push(`Взрослые: ${p.adults}`);
+  if (p.kids || p.children) parts.push(`Дети: ${p.kids || p.children}`);
+  el.textContent = parts.length ? `Даты бронирования: ${parts.join(' · ')}` : 'Даты бронирования: —';
+}
+
+// === SVG helpers ===
 function ensureLayer(id, {pointerNone=false, before=null}={}){
   let g = svgRoot.querySelector('#'+CSS.escape(id));
   if(!g){
@@ -112,7 +131,7 @@ function makeHitClone(el){
   c.dataset.hit='1';
   return c;
 }
-function makeHighlightClone(el, color='#ff3b30'){
+function makeHighlightClone(el, color){
   const c = el.cloneNode(true);
   c.removeAttribute('id');
   if (c.tagName !== 'use') c.setAttribute('fill','none');
@@ -123,33 +142,40 @@ function makeHighlightClone(el, color='#ff3b30'){
   c.setAttribute('pointer-events','none');
   return c;
 }
+function getReadableLabel(el){
+  const id = el.getAttribute('id') || '';
+  const dataName = el.dataset.name || '';
+  const parent = el.closest('g');
+  const parentLabel = parent && (parent.getAttribute('inkscape:label') || parent.getAttribute('sodipodi:label') || parent.id || '') || '';
+  const name = dataName || id || parentLabel || 'объект';
+  const m = (id||'').match(/(\d+)(?!.*\d)/);
+  const num = m ? m[1] : '';
+  return num ? `${name} №${num}` : name;
+}
 
-// === ПОДГОТОВКА SVG ===
+// === основная подготовка интерактива ===
 function prepareSvg(svg){
   const selLayer = getSelectionLayer();
   const hitLayer = getHitLayer();
 
-  // найти слои по именам
   const allGroups = Array.from(svg.querySelectorAll('g'));
   const groups = allGroups.filter(g=>{
     const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
     return LAYER_LABELS.some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
   });
 
-  const SHAPE_SEL = 'path,rect,polygon,polyline,circle,ellipse,use';
+  const SHAPES = 'path,rect,polygon,polyline,circle,ellipse,use';
   const shapes = groups.flatMap(g=>{
     const layerName = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'');
-    return Array.from(g.querySelectorAll(SHAPE_SEL)).map(el => (el.dataset.layer=layerName, el));
+    return Array.from(g.querySelectorAll(SHAPES)).map(el => (el.dataset.layer=layerName, el));
   });
 
-  let attached = 0;
   shapes.forEach(el=>{
     el.style.pointerEvents='all';
     el.style.cursor='pointer';
-    el.classList.add('pitch');
 
-    // hit-area
-    let hit=null;
+    // hit-area для тонких объектов
+    let hit = null;
     if (isThinStrokeOrNoPaint(el)){
       hit = makeHitClone(el);
       hit.dataset.layer = el.dataset.layer;
@@ -157,35 +183,35 @@ function prepareSvg(svg){
     }
     const target = hit || el;
 
-    // tooltip по ховеру
+    // tooltip
     target.addEventListener('mousemove', (ev)=>{
-      const {name, num} = getLabelFrom(el);
-      const label = num ? `${name} №${num}` : name;
-      showTooltip(label, ev.clientX+12, ev.clientY+12);
+      tooltipEl.textContent = getReadableLabel(el);
+      tooltipEl.style.left = (ev.clientX + 12) + 'px';
+      tooltipEl.style.top  = (ev.clientY + 12) + 'px';
+      tooltipEl.hidden = false;
     });
-    target.addEventListener('mouseleave', hideTooltip);
+    target.addEventListener('mouseleave', ()=>{ tooltipEl.hidden = true; });
 
-    // hover highlight (светло-красный)
+    // hover highlight — светло-красный
     target.addEventListener('mouseenter', ()=>{
       if (el.dataset.sel==='1') return;
       const hov = makeHighlightClone(el, '#ff9aa0');
       hov.id='__hover__';
-      getSelectionLayer().appendChild(hov);
+      selLayer.appendChild(hov);
     });
     target.addEventListener('mouseleave', ()=>{
-      const prev = getSelectionLayer().querySelector('#__hover__');
+      const prev = selLayer.querySelector('#__hover__');
       if (prev) prev.remove();
     });
 
-    // click select / unselect
+    // click: toggle selection, выделение — красным
     target.addEventListener('click', (ev)=>{
       ev.stopPropagation();
-
       const nowSelected = el.dataset.sel === '1';
       const turnOn = !nowSelected;
       el.dataset.sel = turnOn ? '1' : '0';
 
-      // убрать старую подсветку
+      // снять прежнюю рамку
       if (el.dataset.selCloneId){
         const old = document.getElementById(el.dataset.selCloneId);
         if (old) old.remove();
@@ -193,149 +219,68 @@ function prepareSvg(svg){
       }
 
       if (turnOn){
-        // выделяем красным
-        const sel = makeHighlightClone(el, '#ff3b30');
+        const sel = makeHighlightClone(el, '#ff3b30'); // красный
         const cid = '__sel__'+Math.random().toString(36).slice(2);
         sel.id = cid;
-        getSelectionLayer().appendChild(sel);
+        selLayer.appendChild(sel);
         el.dataset.selCloneId = cid;
 
         selectedEl = el;
-        const {name, num, id} = getLabelFrom(el);
-        const label = num ? `${name} №${num}` : (name || id);
-
-        showConfirm(label);
-        setStatus(`<b>Объект:</b> ${label}<br><b>Слой:</b> ${el.dataset.layer} — выбран`);
+        selectedLbl.textContent = getReadableLabel(el);
+        btnOk.disabled = btnCancel.disabled = false;
       } else {
-        // повторный клик — снять выделение
-        selectedEl = null;
-        hideConfirm();
-        hideTooltip();
-        setStatus(`<b>Объект:</b> —<br><b>Слой:</b> ${el.dataset.layer} — снят`);
+        clearSelection();
       }
     });
-
-    attached++;
-  });
-
-  setStatus(`${statusEl.innerHTML} <br><b>Кликабельно:</b> ${attached}`);
-}
-
-// === UI КНОПКИ ===
-function bindUI(){
-  $$('.toggle').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const lbl = btn.dataset.layer;
-      const isOn = btn.classList.contains('on');
-      setLayerVisible(lbl, !isOn);
-      btn.classList.toggle('on', !isOn);
-      btn.classList.toggle('off', isOn);
-    });
-  });
-
-  $('#btn-all')?.addEventListener('click', ()=>{
-    LAYER_LABELS.forEach(l => setLayerVisible(l, true));
-    $$('.toggle').forEach(b=>{ b.classList.add('on'); b.classList.remove('off'); });
-  });
-
-  $('#btn-none')?.addEventListener('click', ()=>{
-    LAYER_LABELS.forEach(l => setLayerVisible(l, false));
-    $$('.toggle').forEach(b=>{ b.classList.remove('on'); b.classList.add('off'); });
-  });
-
-  opacityInp?.addEventListener('input', ()=>{
-    const v = Number(opacityInp.value)/100;
-    if (svgOverlay) svgOverlay.setOpacity(v);
-    if (svgRoot) svgRoot.style.opacity = v;
-  });
-
-  // Панель подтверждения
-  $('#cp-cancel')?.addEventListener('click', ()=>{
-    hideConfirm();
-    if (selectedEl){
-      selectedEl.dataset.sel='0';
-      if (selectedEl.dataset.selCloneId){
-        const old = document.getElementById(selectedEl.dataset.selCloneId);
-        if (old) old.remove();
-        delete selectedEl.dataset.selCloneId;
-      }
-      selectedEl=null;
-    }
-  });
-
-  $('#cp-ok')?.addEventListener('click', ()=>{
-    if (!selectedEl) return;
-    const {name, num, id} = getLabelFrom(selectedEl);
-    const payload = {
-      type: 'pitch_selection',
-      id, name, number: num || null,
-      params: getAllParams()
-    };
-
-    const tg = window.Telegram && window.Telegram.WebApp;
-    if (tg && typeof tg.sendData === 'function'){
-      tg.HapticFeedback?.impactOccurred?.('light');
-      tg.sendData(JSON.stringify(payload));
-      tg.close?.();
-    } else {
-      alert('Выбор отправлен: ' + JSON.stringify(payload, null, 2));
-      const back = new URLSearchParams(location.search).get('back');
-      if (back) location.href = back;
-    }
   });
 }
 
-// === ПОКАЗ/СКРЫТИЕ СЛОЁВ ===
+// показать/скрыть слои
 function setLayerVisible(label, visible){
   const esc = CSS.escape(label);
-  $$( `[data-layer="${esc}"]`, svgRoot ).forEach(el=>{
-    if (el.dataset.hit === '1'){ el.style.display = visible ? '' : 'none'; }
-    else { el.classList.toggle('layer-hidden', !visible); }
+  $$(`[data-layer="${esc}"]`, svgRoot).forEach(el=>{
+    if (el.dataset.hit === '1') el.style.display = visible ? '' : 'none';
+    else el.classList.toggle('layer-hidden', !visible);
   });
-  $$( `[data-layer="${esc}"]`, getHitLayer() ).forEach(el=>{
+  $$(`[data-layer="${esc}"]`, getHitLayer()).forEach(el=>{
     el.style.display = visible ? '' : 'none';
   });
 }
 
-// === ПАРАМЕТРЫ БРОНИРОВАНИЯ ИЗ URL ===
-function getAllParams(){
-  const sp = new URLSearchParams(location.search);
-  const res = {};
-  for (const [k,v] of sp.entries()) res[k]=v;
-  return res;
+// очистка выбора (кнопка «Отмена» или повторный клик)
+function clearSelection(){
+  tooltipEl.hidden = true;
+  if (!selectedEl){ selectedLbl.textContent = '—'; btnOk.disabled = btnCancel.disabled = true; return; }
+  selectedEl.dataset.sel='0';
+  if (selectedEl.dataset.selCloneId){
+    const old = document.getElementById(selectedEl.dataset.selCloneId);
+    if (old) old.remove();
+    delete selectedEl.dataset.selCloneId;
+  }
+  selectedEl = null;
+  selectedLbl.textContent = '—';
+  btnOk.disabled = btnCancel.disabled = true;
 }
-function humanizeKey(k){
-  const map = {
-    checkin:'Заезд', checkout:'Выезд',
-    date_from:'Заезд', date_to:'Выезд',
-    adults:'Взрослые', kids:'Дети', children:'Дети',
-    nights:'Ночей', guests:'Гостей',
-    power:'Электричество', water:'Вода', car:'Авто', rv:'Кемпер', tent:'Палатка',
-    type:'Тип места', size:'Размер'
+
+// подтверждение выбора
+function submitSelection(){
+  if (!selectedEl) return;
+  const payload = {
+    type: 'pitch_selection',
+    id: selectedEl.id || null,
+    name: getReadableLabel(selectedEl),
+    layer: selectedEl.dataset.layer || null,
+    params: getParams()
   };
-  return map[k] || k;
-}
-function renderParamsSummary(){
-  const el = $('#params');
-  const p = getAllParams();
-  const keys = Object.keys(p);
-  if (!keys.length){ el.textContent = 'Ваш выбор: —'; return; }
 
-  const important = ['checkin','date_from','checkout','date_to','adults','kids','children','guests','nights','type','size','power','water','car','rv','tent'];
-  const ordered = keys.sort((a,b)=>{
-    const ia = important.indexOf(a), ib = important.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-
-  const parts = [];
-  ordered.forEach(k=>{
-    const val = p[k];
-    if (val==null || val==='') return;
-    parts.push(`${humanizeKey(k)}: ${val}`);
-  });
-
-  el.textContent = 'Ваш выбор: ' + (parts.join(' · ') || '—');
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && typeof tg.sendData === 'function'){
+    tg.HapticFeedback?.impactOccurred?.('light');
+    tg.sendData(JSON.stringify(payload));
+    tg.close?.();
+  } else {
+    alert('Выбор отправлен: ' + JSON.stringify(payload, null, 2));
+    const back = new URLSearchParams(location.search).get('back');
+    if (back) location.href = back;
+  }
 }

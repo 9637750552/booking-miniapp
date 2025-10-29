@@ -1,113 +1,86 @@
 :root{
-  --bg:#0f1214;
-  --fg:#e8eef2;
-  --muted:#9fb3c8;
-  --card:#ffffff;
-  --card-fg:#0b1220;
-  --chip:#2b3440;
-  --chip-on:#2e7d32;
-  --chip-off:#374151;
-  --accent:#007aff;
-  --shadow:0 8px 24px rgba(0,0,0,.25);
+  --bg:#0f1214;         /* фон верхней панели */
+  --fg:#e8eef2;         /* текст на верхней панели */
+  --chip:#2b3440;       /* кнопки слоёв — базовые */
+  --chip-on:#2e7d32;    /* активные слои */
+  --chip-off:#374151;   /* отключённые слои */
+  --accent:#007aff;     /* основные CTA */
+  --ink:#0b1220;        /* текст на светлом */
+  --muted:#5b6775;
+  --surface:#ffffff;    /* фон нижней панели */
+  --shadow:0 8px 20px rgba(0,0,0,.18);
 }
 
+/* базовые */
 *{ box-sizing:border-box; }
-html,body{ height:100%; margin:0; }
-body{ background:#e8e8e8; color:#222; font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial; }
+html,body{ height:100%; margin:0; font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; color:var(--ink); background:#eceff3; }
 
-#map{ width:100%; height:calc(100vh - 64px); background:#ddd; }
-
-/* ===== toolbar ===== */
-#toolbar{
-  position:sticky; top:0; left:0; right:0; z-index:1000;
-  background:var(--bg); color:var(--fg);
+/* верхняя панель */
+#topbar{
+  position:sticky; top:0; z-index:1000;
   display:flex; align-items:center; justify-content:space-between;
-  gap:8px; padding:8px;
-  border-bottom:1px solid #0006;
-  min-height:64px;
+  gap:8px; padding:8px 10px;
+  background:var(--bg); color:var(--fg); border-bottom:1px solid #0007;
+}
+#topbar .left{ display:flex; align-items:center; gap:8px; overflow:hidden; }
+.primary-layers{ display:flex; gap:6px; }
+.more-layers{
+  display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin; max-width:min(54vw, 520px); padding-bottom:2px;
+}
+.more-layers::-webkit-scrollbar{ height:6px; }
+.more-layers::-webkit-scrollbar-thumb{ background:#445; border-radius:3px; }
+
+#topbar .right{ display:flex; align-items:center; gap:10px; }
+#topbar .link{ color:var(--fg); text-decoration:none; background:#2b2f36; padding:6px 10px; border-radius:10px; }
+#topbar .zoom{ display:flex; gap:6px; }
+#topbar .zoom button{
+  width:36px; height:32px; border:0; border-radius:10px; cursor:pointer; color:#fff; background:#2b2f36;
 }
 
-.toolbar-left{
-  display:flex; align-items:center; gap:6px;
-  flex-wrap:wrap;
-  overflow-x:auto; -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-  max-width:62vw;
-}
-.toolbar-left::-webkit-scrollbar{ height:6px; }
-.toolbar-left::-webkit-scrollbar-thumb{ background:#445; border-radius:3px; }
-
-.toolbar-right{
-  display:flex; align-items:center; gap:10px;
-  margin-left:auto;
-  flex:0 0 auto;
-}
-
-.toolbar-label{ color:#cbd5e1; margin-right:4px; font-size:13px; }
-
-button{
-  border:0; border-radius:10px;
-  padding:6px 10px; font-size:13px; cursor:pointer;
-  color:#fff; background:var(--chip);
-  white-space:nowrap;
-}
+/* кнопки слоёв */
+button{ border:0; border-radius:10px; padding:6px 10px; font-size:13px; cursor:pointer; white-space:nowrap; }
+button.toggle{ background:var(--chip); color:#fff; }
 button.toggle.on{ background:var(--chip-on); }
 button.toggle.off{ background:var(--chip-off); color:#cbd5e1; }
-button.ghost{ background:#2b2f36; color:#e5e7eb; }
-button.primary{ background:var(--accent); }
+button.ghost{ background:#e6e8ec; color:#1b2331; }
+button.primary{ background:var(--accent); color:#fff; }
 
-.opacity-wrap{
-  display:flex; align-items:center; gap:6px; color:#cbd5e1; font-size:13px; white-space:nowrap;
-}
-#opacity{ width:120px; }
+/* карта */
+#map{ width:100%; height:calc(100vh - 52px - 92px); background:#d9dee6; } /* 52px topbar, 92px bottombar */
 
-#back-link{
-  text-decoration:none; padding:6px 10px; border-radius:10px; background:#2b2f36; color:#e5e7eb;
-}
-
-/* статус и выбранные параметры — светлые карточки для контраста */
-#params, #status{
-  background:var(--card);
-  color:var(--card-fg);
-  padding:6px 10px;
-  border-radius:10px;
-  box-shadow:var(--shadow);
-  max-width:30vw;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  font-size:13px;
-}
-#status{ white-space:normal; line-height:1.25; max-width:34vw; }
-#status b{ font-weight:700; }
-
-/* Спрятанные слои */
-.layer-hidden{ display:none; }
-
-/* ===== tooltip ===== */
+/* tooltip */
 #tooltip{
   position:fixed; z-index:1100;
-  background:#fff; color:#111; padding:6px 8px; border-radius:8px;
-  font-size:12px; box-shadow:var(--shadow);
-  pointer-events:none;
-  transform:translate(12px, 12px);
+  background:#111; color:#fff; padding:6px 8px; border-radius:8px; font-size:12px;
+  box-shadow:var(--shadow); pointer-events:none; transform:translate(12px, 12px);
 }
 
-/* ===== confirm panel ===== */
-#confirm-panel{
-  position:fixed; left:50%; transform:translateX(-50%);
-  bottom:10px; z-index:1100;
-  background:var(--card); color:var(--card-fg);
-  border-radius:14px; padding:10px 12px;
-  box-shadow:var(--shadow);
-  display:flex; align-items:center; gap:12px;
-  max-width:min(92vw, 560px);
+/* нижняя панель */
+#bottombar{
+  position:sticky; bottom:0; z-index:900;
+  background:var(--surface); box-shadow:0 -4px 14px rgba(0,0,0,.08);
+  padding:10px 12px; border-top:1px solid rgba(0,0,0,.08);
 }
-#confirm-panel .cp-title{ color:#555; font-size:12px; }
-#confirm-panel .cp-name{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50vw; }
-#confirm-panel .cp-actions{ margin-left:auto; display:flex; gap:8px; }
+#bottombar .row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+}
+#bottombar .row.secondary{ margin-top:6px; }
+.chosen{ display:flex; align-items:center; gap:8px; min-height:32px; }
+.chosen .muted{ color:var(--muted); }
+#selected-label{ font-weight:700; }
 
-/* мобильные ужатия */
-@media (max-width: 420px){
-  #map{ height:calc(100vh - 72px); }
-  .toolbar-left{ max-width:58vw; }
-  #params, #status{ max-width:46vw; }
+.actions{ display:flex; gap:8px; }
+.actions .ghost[disabled], .actions .primary[disabled]{ opacity:.45; cursor:default; }
+
+/* спрятанные слои */
+.layer-hidden{ display:none; }
+
+/* прячем стандартный zoom Leaflet — у нас свой */
+.leaflet-control-zoom{ display:none !important; }
+
+/* мобильные правки */
+@media (max-width: 460px){
+  #map{ height:calc(100vh - 56px - 108px); }
+  .more-layers{ max-width:52vw; }
 }
