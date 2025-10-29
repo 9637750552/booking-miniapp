@@ -13,7 +13,6 @@ const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
 // UI
-const tooltipEl   = $('#tooltip');
 const selectedLbl = $('#selected-label');
 const btnCancel   = $('#cp-cancel');
 const btnOk       = $('#cp-ok');
@@ -111,7 +110,6 @@ function ensureLayer(id, {pointerNone=false, before=null}={}){
   return g;
 }
 function getSelectionLayer(){ return ensureLayer('__selection__', {pointerNone:true}); }
-function getHitLayer(){ const sel = getSelectionLayer(); return ensureLayer('__hit__', {before:sel}); }
 
 function parseStyle(styleStr=''){
   const o={}; styleStr.split(';').forEach(p=>{ const [k,v]=p.split(':').map(s=>s&&s.trim()); if(k) o[k]=v; });
@@ -161,11 +159,11 @@ function getReadableLabel(el){
   return num ? `${name} №${num}` : name;
 }
 
-// === подготовка интерактива (только питчи) ===
+// === подготовка интерактива (только питчи, БЕЗ hover-подсветки) ===
 function prepareSvg(svg){
   const selLayer = getSelectionLayer();
-  const hitLayer = getHitLayer();
 
+  // соберём фигуры из групп pitch-слоёв
   const allGroups = Array.from(svg.querySelectorAll('g'));
   const groups = allGroups.filter(g=>{
     const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
@@ -178,78 +176,47 @@ function prepareSvg(svg){
     return Array.from(g.querySelectorAll(SHAPES)).map(el => (el.dataset.layer=layerName, el));
   });
 
+  // для тонких контуров делаем невидимую "hit"-область
+  const hitLayer = (()=>{ const sel = getSelectionLayer(); let h = svg.querySelector('#__hit__'); if(!h){ h=document.createElementNS('http://www.w3.org/2000/svg','g'); h.id='__hit__'; sel.before(h);} return h; })();
+
   shapes.forEach(el=>{
     el.style.pointerEvents='all';
     el.style.cursor='pointer';
 
-    let hit = null;
+    let target = el;
     if (isThinStrokeOrNoPaint(el)){
-      hit = makeHitClone(el);
+      const hit = makeHitClone(el);
       hit.dataset.layer = el.dataset.layer;
       hitLayer.appendChild(hit);
+      target = hit;
     }
-    const target = hit || el;
 
-    // считаем «кликом» только короткое нажатие без сдвига — тогда не даём Leaflet перехватывать событие
+    // считаем «кликом» только короткое нажатие без сдвига
     let downPos = null;
-
     target.addEventListener('pointerdown', (ev)=>{
       downPos = {x: ev.clientX, y: ev.clientY};
     }, {passive:true});
 
-    // hover — только мышь
-    target.addEventListener('pointerenter', (ev)=>{
-      if (ev.pointerType !== 'mouse') return;
-      if (el.dataset.sel==='1') return;
-      const hov = makeHighlightClone(el, '#ff9aa0'); // светло-красный
-      hov.id='__hover__';
-      selLayer.appendChild(hov);
-    });
-    target.addEventListener('pointerleave', (ev)=>{
-      if (ev.pointerType !== 'mouse') return;
-      const prev = selLayer.querySelector('#__hover__');
-      if (prev) prev.remove();
-      tooltipEl.hidden = true;
-    });
-
-    // tooltip — только мышь
-    target.addEventListener('pointermove', (ev)=>{
-      if (ev.pointerType !== 'mouse') return;
-      tooltipEl.textContent = getReadableLabel(el);
-      tooltipEl.style.left = (ev.clientX + 12) + 'px';
-      tooltipEl.style.top  = (ev.clientY + 12) + 'px';
-      tooltipEl.hidden = false;
-    });
-
-    // выбор — pointerup (мышь/тач)
     target.addEventListener('pointerup', (ev)=>{
-      // определяем «клик»
       let isClick = true;
-      if (downPos) {
+      if (downPos){
         const dx = Math.abs(ev.clientX - downPos.x);
         const dy = Math.abs(ev.clientY - downPos.y);
         if (dx > 6 || dy > 6) isClick = false;
       }
       downPos = null;
+      if (!isClick) return;
 
-      if (!isClick) return; // жест перетаскивания — не трогаем, пусть карта скроллится
-
-      // это «клик»: не даём карте его перехватить
       ev.stopPropagation();
       ev.preventDefault();
 
       const isSame = selectedEl === el;
-      if (isSame) {            // повторный клик по выбранному — снять
-        clearSelection();
-        return;
-      }
+      if (isSame) { clearSelection(); return; }   // повторный клик — снять
 
-      // одиночный выбор — снимаем прежний, если был
-      if (selectedEl) clearSelection();
+      if (selectedEl) clearSelection();          // одиночный выбор
 
-      // выделяем новый
       el.dataset.sel = '1';
-      const sel = makeHighlightClone(el, '#ff3b30'); // красный
+      const sel = makeHighlightClone(el, '#ff3b30'); // КРАСНАЯ рамка выбора
       const cid = '__sel__'+Math.random().toString(36).slice(2);
       sel.id = cid;
       selLayer.appendChild(sel);
@@ -260,26 +227,28 @@ function prepareSvg(svg){
       btnOk.disabled = btnCancel.disabled = false;
     });
 
-    // на случай отмены системы
     target.addEventListener('pointercancel', ()=>{ downPos = null; });
   });
 }
 
-// показать/скрыть слои (только питчи)
+// показать/скрыть слой по имени
 function setLayerVisible(label, visible){
   const esc = CSS.escape(label);
+  // элементы слоя и их hit-клоны
   $$(`[data-layer="${esc}"]`, svgRoot).forEach(el=>{
     if (el.dataset.hit === '1') el.style.display = visible ? '' : 'none';
     else el.classList.toggle('layer-hidden', !visible);
   });
-  $$(`[data-layer="${esc}"]`, getHitLayer()).forEach(el=>{
-    el.style.display = visible ? '' : 'none';
-  });
+  const hitRoot = svgRoot.querySelector('#__hit__');
+  if (hitRoot){
+    $$(`[data-layer="${esc}"]`, hitRoot).forEach(el=>{
+      el.style.display = visible ? '' : 'none';
+    });
+  }
 }
 
 // очистка выбора
 function clearSelection(){
-  tooltipEl.hidden = true;
   if (!selectedEl){ selectedLbl.textContent = '—'; btnOk.disabled = btnCancel.disabled = true; return; }
   selectedEl.dataset.sel='0';
   if (selectedEl.dataset.selCloneId){
