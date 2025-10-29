@@ -17,23 +17,11 @@
     </div>
 
     <div class="right">
-      <!-- ВСТРОЕННЫЕ SVG: назад / плюс / минус -->
-      <button id="back-btn" class="round" title="Назад" aria-label="Назад">
-        <svg viewBox="0 0 20 20" aria-hidden="true">
-          <path d="M12.5 4.5L7 10l5.5 5.5M7 10h10" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <!-- ТОЛЬКО ТЕКСТОВЫЕ СИМВОЛЫ, без svg/эмодзи -->
+      <button id="back-btn" class="round" title="Назад" aria-label="Назад">←</button>
       <div class="zoom">
-        <button id="zoom-in" class="round" aria-label="Приблизить">
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M10 4.5v11M4.5 10h11" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <button id="zoom-out" class="round" aria-label="Отдалить">
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M4.5 10h11" stroke-linecap="round"/>
-          </svg>
-        </button>
+        <button id="zoom-in"  class="round" aria-label="Приблизить">+</button>
+        <button id="zoom-out" class="round" aria-label="Отдалить">−</button>
       </div>
     </div>
   </header>

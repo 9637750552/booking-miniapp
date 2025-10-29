@@ -35,8 +35,16 @@ html,body{
   color:var(--fg);
   border-bottom:1px solid #0007;
 }
-#topbar .left{ display:flex; align-items:center; gap:6px; }
-#topbar .right{ display:flex; align-items:center; gap:8px; }
+#topbar .left{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#topbar .right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 
 /* кнопки слоёв */
 button{
@@ -47,14 +55,20 @@ button{
   cursor:pointer;
   white-space:nowrap;
 }
-button.toggle{ background:var(--chip); color:#fff; }
+button.toggle{
+  background:var(--chip);
+  color:#fff;
+}
 button.toggle.on{ background:var(--chip-on); }
-button.toggle.off{ background:var(--chip-off); color:#cbd5e1; }
+button.toggle.off{
+  background:var(--chip-off);
+  color:#cbd5e1;
+}
 
 button.ghost{ background:#e6e8ec; color:#1b2331; }
 button.primary{ background:var(--accent); color:#fff; }
 
-/* стрелка / плюс / минус — единые, белые */
+/* ← + − — одинаковые текстовые кнопки; фиксируем шрифт, чтобы не подменялся на эмодзи */
 .round{
   width:44px;
   height:44px;
@@ -62,26 +76,14 @@ button.primary{ background:var(--accent); color:#fff; }
   place-items:center;
   border-radius:12px;
   background:#2b2f36;
-  color:#ffffff;  /* для fallback текста, если svg не загрузится */
+  color:#ffffff;
+  font-family: "Segoe UI", Roboto, Arial, Helvetica, sans-serif; /* без emoji */
+  font-weight:800;
+  font-size:22px;      /* одинаковый размер символов */
   line-height:1;
   text-align:center;
+  letter-spacing:0;    /* чтобы + и − выглядели одинаково плотными */
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
-}
-/* стало — красим реальные фигуры внутри SVG */
-.round svg{
-  width:22px;
-  height:22px;
-}
-.round svg path,
-.round svg line,
-.round svg polyline,
-.round svg rect,
-.round svg circle {
-  stroke:#ffffff;
-  stroke-width:2.5;
-  fill:none;
-  stroke-linecap:round;
-  stroke-linejoin:round;
 }
 .round:active{ background:#3c3f45; }
 #topbar .zoom{ display:flex; gap:6px; align-items:center; }
