@@ -8,27 +8,16 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Верхняя компакт-панель -->
+  <!-- Верхняя панель -->
   <header id="topbar">
     <div class="left">
-      <div class="primary-layers">
-        <button class="toggle on" data-layer="pitches_60">60</button>
-        <button class="toggle on" data-layer="pitches_80">80</button>
-        <button class="toggle on" data-layer="pitches_100">100</button>
-        <!-- Кнопка с меню слоёв -->
-        <button id="more-btn" class="toggle ghost" aria-haspopup="true" aria-expanded="false">⋯</button>
-        <div id="layers-menu" role="menu" hidden>
-          <label><input type="checkbox" data-layer="sanitary" checked> sanitary</label>
-          <label><input type="checkbox" data-layer="admin" checked> admin</label>
-          <label><input type="checkbox" data-layer="playground" checked> playground</label>
-          <label><input type="checkbox" data-layer="roads" checked> roads</label>
-          <label><input type="checkbox" data-layer="border" checked> border</label>
-        </div>
-      </div>
+      <button class="toggle on" data-layer="pitches_60">60</button>
+      <button class="toggle on" data-layer="pitches_80">80</button>
+      <button class="toggle on" data-layer="pitches_100">100</button>
     </div>
 
     <div class="right">
-      <button id="back-btn" class="round" title="Назад" aria-label="Назад">←</button>
+      <button id="back-btn" class="round heavy" title="Назад" aria-label="Назад">←</button>
       <div class="zoom">
         <button id="zoom-in"  class="round" aria-label="Приблизить">+</button>
         <button id="zoom-out" class="round" aria-label="Отдалить">−</button>

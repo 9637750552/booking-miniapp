@@ -1,9 +1,7 @@
 // === НАСТРОЙКИ ===
 const SVG_URL = 'assets/masterplan.svg';
-const LAYER_LABELS = [
-  'pitches_60','pitches_80','pitches_100',
-  'sanitary','admin','playground','roads','border'
-];
+// Разрешаем интерактив только для слоёв питчей:
+const PITCH_LAYERS = ['pitches_60','pitches_80','pitches_100'];
 
 // === КАРТА ===
 const map = L.map('map', { crs: L.CRS.Simple, zoomControl: false, minZoom: -4 });
@@ -58,7 +56,7 @@ function wireUI(){
   const back = new URLSearchParams(location.search).get('back') || '../index.html';
   $('#back-btn').addEventListener('click', ()=>location.href = back);
 
-  // три основные кнопки
+  // три кнопки питчей
   $$('.toggle[data-layer]').forEach(btn=>{
     const layer = btn.dataset.layer;
     btn.addEventListener('click', ()=>{
@@ -67,32 +65,6 @@ function wireUI(){
       btn.classList.toggle('on', on);
       btn.classList.toggle('off', !on);
     });
-  });
-
-  // выпадающее меню
-  const moreBtn = $('#more-btn');
-  const menu = $('#layers-menu');
-  moreBtn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    const open = menu.hidden;
-    menu.hidden = !open;
-    moreBtn.setAttribute('aria-expanded', String(open));
-  });
-  // чекбоксы слоя
-  $$('#layers-menu input[type="checkbox"]').forEach(ch=>{
-    ch.addEventListener('change', ()=>{
-      setLayerVisible(ch.dataset.layer, ch.checked);
-      // подсветим состояние на случай если те же слои есть отдельными кнопками (у нас нет — но пусть будет)
-      const btn = $(`.toggle[data-layer="${CSS.escape(ch.dataset.layer)}"]`);
-      if (btn) { btn.classList.toggle('on', ch.checked); btn.classList.toggle('off', !ch.checked); }
-    });
-  });
-  // клик вне меню — закрыть
-  document.addEventListener('click', (e)=>{
-    if (!menu.hidden && !menu.contains(e.target) && e.target !== moreBtn) {
-      menu.hidden = true;
-      moreBtn.setAttribute('aria-expanded','false');
-    }
   });
 
   // confirm bar
@@ -109,12 +81,22 @@ function getParams(){
 function renderBookingSummary(){
   const el = $('#booking-summary');
   const p = getParams();
+
+  // куча синонимов
+  const getFirst = (...keys)=>keys.find(k=>p[k]!=null && p[k] !== '');
+  const ciKey = getFirst('checkin','date_from','from','arrival','start','checkin_date','check_in','dateStart','start_date');
+  const coKey = getFirst('checkout','date_to','to','departure','end','checkout_date','check_out','dateEnd','end_date');
+  const guestsKey = getFirst('guests','persons','people','count');
+  const adultsKey = getFirst('adults','adult');
+  const kidsKey = getFirst('kids','children','child');
+
   const parts = [];
-  if (p.checkin || p.date_from) parts.push(`Заезд: ${p.checkin || p.date_from}`);
-  if (p.checkout || p.date_to) parts.push(`Выезд: ${p.checkout || p.date_to}`);
-  if (p.guests) parts.push(`Гостей: ${p.guests}`);
-  if (p.adults) parts.push(`Взрослые: ${p.adults}`);
-  if (p.kids || p.children) parts.push(`Дети: ${p.kids || p.children}`);
+  if (ciKey) parts.push(`Заезд: ${p[ciKey]}`);
+  if (coKey) parts.push(`Выезд: ${p[coKey]}`);
+  if (p[guestsKey]) parts.push(`Гостей: ${p[guestsKey]}`);
+  if (p[adultsKey]) parts.push(`Взрослые: ${p[adultsKey]}`);
+  if (p[kidsKey]) parts.push(`Дети: ${p[kidsKey]}`);
+
   el.textContent = parts.length ? `Даты бронирования: ${parts.join(' · ')}` : 'Даты бронирования: —';
 }
 
@@ -180,7 +162,7 @@ function getReadableLabel(el){
   return num ? `${name} №${num}` : name;
 }
 
-// === подготовка интерактива (Pointer Events для тача/мыши) ===
+// === подготовка интерактива (только питчи) ===
 function prepareSvg(svg){
   const selLayer = getSelectionLayer();
   const hitLayer = getHitLayer();
@@ -188,7 +170,7 @@ function prepareSvg(svg){
   const allGroups = Array.from(svg.querySelectorAll('g'));
   const groups = allGroups.filter(g=>{
     const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
-    return LAYER_LABELS.some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
+    return PITCH_LAYERS.some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
   });
 
   const SHAPES = 'path,rect,polygon,polyline,circle,ellipse,use';
@@ -209,12 +191,11 @@ function prepareSvg(svg){
     }
     const target = hit || el;
 
-    // защита от «перетаскивания» — не выбираем, если смещение > 6px
+    // защита от «перетаскивания»
     let downPos = null;
-
     target.addEventListener('pointerdown', (ev)=>{
-      downPos = {x: ev.clientX, y: ev.clientY, type: ev.pointerType};
-    });
+      downPos = {x: ev.clientX, y: ev.clientY};
+    }, {passive:true});
 
     // hover — только мышь
     target.addEventListener('pointerenter', (ev)=>{
@@ -240,44 +221,39 @@ function prepareSvg(svg){
       tooltipEl.hidden = false;
     });
 
-    // выбор — pointerup (и мышь, и тач)
+    // выбор — pointerup (мышь/тач)
     target.addEventListener('pointerup', (ev)=>{
-      // если перетаскивали — игнор
       if (downPos) {
         const dx = Math.abs(ev.clientX - downPos.x);
         const dy = Math.abs(ev.clientY - downPos.y);
-        if (dx > 6 || dy > 6) return;
+        if (dx > 6 || dy > 6) return; // перетаскивали — игнор
       }
 
-      const nowSelected = el.dataset.sel === '1';
-      const turnOn = !nowSelected;
-      el.dataset.sel = turnOn ? '1' : '0';
-
-      // снять прежнюю рамку
-      if (el.dataset.selCloneId){
-        const old = document.getElementById(el.dataset.selCloneId);
-        if (old) old.remove();
-        delete el.dataset.selCloneId;
-      }
-
-      if (turnOn){
-        const sel = makeHighlightClone(el, '#ff3b30'); // красный
-        const cid = '__sel__'+Math.random().toString(36).slice(2);
-        sel.id = cid;
-        selLayer.appendChild(sel);
-        el.dataset.selCloneId = cid;
-
-        selectedEl = el;
-        selectedLbl.textContent = getReadableLabel(el);
-        btnOk.disabled = btnCancel.disabled = false;
-      } else {
+      const isSame = selectedEl === el;
+      if (isSame) {            // повторный клик по тому же — снять
         clearSelection();
+        return;
       }
+
+      // одиночный выбор — снимаем прежний, если был
+      if (selectedEl) clearSelection();
+
+      // выделяем новый
+      el.dataset.sel = '1';
+      const sel = makeHighlightClone(el, '#ff3b30'); // красный
+      const cid = '__sel__'+Math.random().toString(36).slice(2);
+      sel.id = cid;
+      selLayer.appendChild(sel);
+      el.dataset.selCloneId = cid;
+
+      selectedEl = el;
+      selectedLbl.textContent = getReadableLabel(el);
+      btnOk.disabled = btnCancel.disabled = false;
     });
   });
 }
 
-// показать/скрыть слои
+// показать/скрыть слои (только питчи)
 function setLayerVisible(label, visible){
   const esc = CSS.escape(label);
   $$(`[data-layer="${esc}"]`, svgRoot).forEach(el=>{
