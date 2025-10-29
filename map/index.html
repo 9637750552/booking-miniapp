@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <title>GoNature — Выбор места на карте</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -17,25 +19,11 @@
     </div>
 
     <div class="right">
-      <!-- SVG-иконки: одинаковый размер независимо от устройства -->
-      <button id="back-btn" class="round" title="Назад" aria-label="Назад">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-          <polyline points="13 5 6 12 13 19"></polyline>
-          <line x1="20" y1="12" x2="6" y2="12"></line>
-        </svg>
-      </button>
+      <!-- Текстовые кнопки -->
+      <button id="back-btn" class="round" title="Назад">←</button>
       <div class="zoom">
-        <button id="zoom-in" class="round" aria-label="Приблизить">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </button>
-        <button id="zoom-out" class="round" aria-label="Отдалить">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </button>
+        <button id="zoom-in"  class="round" title="Приблизить">+</button>
+        <button id="zoom-out" class="round" title="Отдалить">−</button>
       </div>
     </div>
   </header>
@@ -43,7 +31,7 @@
   <!-- Карта -->
   <main id="map"></main>
 
-  <!-- Нижняя панель выбора -->
+  <!-- Нижняя панель -->
   <footer id="bottombar">
     <div class="row">
       <div class="chosen">
@@ -55,7 +43,6 @@
         <button id="cp-ok" class="primary" disabled>Подтвердить</button>
       </div>
     </div>
-
     <div class="row secondary">
       <div id="booking-summary" class="muted">Даты бронирования: —</div>
     </div>

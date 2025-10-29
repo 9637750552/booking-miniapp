@@ -1,5 +1,5 @@
-:root{
-  --bg:#0f1214;         /* верхняя панель */
+:root {
+  --bg:#0f1214;
   --fg:#e8eef2;
   --chip:#2b3440;
   --chip-on:#2e7d32;
@@ -7,108 +7,95 @@
   --accent:#007aff;
   --ink:#0b1220;
   --muted:#5b6775;
-  --surface:#ffffff;    /* нижняя панель */
-  --shadow:0 8px 20px rgba(0,0,0,.18);
+  --surface:#ffffff;
 }
 
-*{ box-sizing:border-box; }
-html,body{
+* { box-sizing:border-box; }
+html,body {
   height:100%;
   margin:0;
   font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
   color:var(--ink);
   background:#eceff3;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color:transparent;
 }
 
-/* верхняя панель */
-#topbar{
-  position:sticky;
-  top:0;
-  z-index:1000;
-  display:flex;
-  align-items:center;              /* всё по вертикали строго по центру */
-  justify-content:space-between;
-  gap:8px;
-  padding:8px 10px;
-  background:var(--bg);
-  color:var(--fg);
+/* Верхняя панель */
+#topbar {
+  position:sticky; top:0; z-index:1000;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:8px 10px;
+  background:var(--bg); color:var(--fg);
   border-bottom:1px solid #0007;
 }
-#topbar .left{
-  display:flex; align-items:center; gap:6px;
-}
-#topbar .right{
+#topbar .left, #topbar .right {
   display:flex; align-items:center; gap:8px;
 }
 
-/* кнопки слоёв */
-button{
-  border:0; border-radius:10px; padding:6px 10px;
-  font-size:13px; cursor:pointer; white-space:nowrap;
+/* Кнопки слоёв */
+button {
+  border:0; border-radius:10px;
+  padding:6px 10px; font-size:13px;
+  cursor:pointer; white-space:nowrap;
 }
-button.toggle{ background:var(--chip); color:#fff; }
-button.toggle.on{ background:var(--chip-on); }
-button.toggle.off{ background:var(--chip-off); color:#cbd5e1; }
+button.toggle { background:var(--chip); color:#fff; }
+button.toggle.on { background:var(--chip-on); }
+button.toggle.off { background:var(--chip-off); color:#cbd5e1; }
 
-button.ghost{ background:#e6e8ec; color:#1b2331; }
-button.primary{ background:var(--accent); color:#fff; }
+button.ghost { background:#e6e8ec; color:#1b2331; }
+button.primary { background:var(--accent); color:#fff; }
 
-/* round-кнопки: одинаковый фон и геометрия */
-.round{
+/* Кнопки ← + − */
+.round {
   width:44px; height:44px;
   display:flex; align-items:center; justify-content:center;
-  border-radius:12px; background:#2b2f36; color:#fff;
+  border-radius:12px;
+  background:#2b2f36;
+  color:#fff;
+  font-family:"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
+  font-size:24px; font-weight:700;
   line-height:1; text-align:center;
+  user-select:none;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
 }
-.round:active{ background:#3c3f45; }
-#topbar .zoom{ display:flex; gap:6px; align-items:center; }
+.round:active { background:#3c3f45; }
+#topbar .zoom { display:flex; gap:6px; align-items:center; }
 
-/* иконки внутри round — единый размер и цвет для всех браузеров */
-.round .icon{
-  width:22px; height:22px; display:block;
-}
-.round .icon line,
-.round .icon polyline,
-.round .icon path,
-.round .icon rect,
-.round .icon circle {
-  stroke:#ffffff; stroke-width:2.4; fill:none;
-  stroke-linecap:round; stroke-linejoin:round;
-}
-
-/* карта */
-#map{
+/* Карта */
+#map {
   width:100%;
   height:calc(100vh - 62px - 92px);
   background:#d9dee6;
 }
 
-/* нижняя панель */
-#bottombar{
+/* Нижняя панель */
+#bottombar {
   position:sticky; bottom:0; z-index:900;
-  background:var(--surface); box-shadow:0 -4px 14px rgba(0,0,0,.08);
+  background:var(--surface);
+  box-shadow:0 -4px 14px rgba(0,0,0,.08);
   padding:10px 12px; border-top:1px solid rgba(0,0,0,.08);
 }
-#bottombar .row{
+#bottombar .row {
   display:flex; align-items:center; justify-content:space-between;
   gap:12px; flex-wrap:wrap;
 }
-#bottombar .row.secondary{ margin-top:6px; }
-.chosen{ display:flex; align-items:center; gap:8px; min-height:32px; }
-.chosen .muted{ color:var(--muted); }
-#selected-label{ font-weight:700; }
-.actions{ display:flex; gap:8px; }
-.actions .ghost[disabled], .actions .primary[disabled]{ opacity:.45; cursor:default; }
+#bottombar .row.secondary { margin-top:6px; }
+.chosen { display:flex; align-items:center; gap:8px; min-height:32px; }
+.chosen .muted { color:var(--muted); }
+#selected-label { font-weight:700; }
+.actions { display:flex; gap:8px; }
+.actions .ghost[disabled], .actions .primary[disabled] { opacity:.45; cursor:default; }
 
-/* скрытые слои */
-.layer-hidden{ display:none; }
+/* Скрытые слои */
+.layer-hidden { display:none; }
 
-/* прячем дефолтный zoom Leaflet */
-.leaflet-control-zoom{ display:none !important; }
+/* Убираем watermark Leaflet */
+.leaflet-control-zoom,
+.leaflet-control-attribution {
+  display:none !important;
+}
 
-/* мобильные */
-@media (max-width:460px){
-  #map{ height:calc(100vh - 66px - 108px); }
+/* Мобильные */
+@media (max-width:460px) {
+  #map { height:calc(100vh - 66px - 108px); }
 }
