@@ -1,77 +1,97 @@
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: system-ui, sans-serif;
+:root{
+  --bg:#0f1214;
+  --fg:#e8eef2;
+  --muted:#9fb3c8;
+  --green:#2e7d32;
+  --red:#9b1c1c;
+  --card:#1b2126;
+  --accent:#007aff;
 }
 
-#map {
-  position: absolute;
-  inset: 48px 0 0 0;
-  background: #e9e9e9;
+*{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; }
+body{ background:#e8e8e8; color:#222; font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial; }
+
+#map{ width:100%; height:calc(100vh - 56px); background:#ddd; }
+
+/* ===== toolbar ===== */
+#toolbar{
+  position:sticky; top:0; left:0; right:0;
+  z-index:1000;
+  background:var(--bg); color:var(--fg);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:8px;
+  border-bottom:1px solid #0006;
+  min-height:56px;
 }
 
-#toolbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: #111;
-  color: #fff;
-  z-index: 1000;
+.toolbar-left{
+  display:flex; align-items:center; gap:6px;
+  flex-wrap:wrap;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  max-width:70vw;
+}
+.toolbar-left::-webkit-scrollbar{ height:6px; }
+.toolbar-left::-webkit-scrollbar-thumb{ background:#445; border-radius:3px; }
+
+.toolbar-right{
+  display:flex; align-items:center; gap:12px;
+  margin-left:auto;
 }
 
-#toolbar button {
-  padding: 6px 10px;
-  border: 1px solid #333;
-  background: #222;
-  color: #fff;
-  border-radius: 6px;
-  cursor: pointer;
+.toolbar-label{ color:#cbd5e1; margin-right:4px; }
+
+button{
+  border:0; border-radius:10px;
+  padding:6px 10px; font-size:13px; cursor:pointer;
+  color:#fff; background:#2b3440;
+  white-space:nowrap;
+}
+button.toggle.on{ background:#2e7d32; }
+button.toggle.off{ background:#374151; color:#cbd5e1; }
+button.ghost{ background:#374151; color:#e5e7eb; }
+button.primary{ background:var(--accent); }
+
+.opacity-wrap{
+  display:flex; align-items:center; gap:6px; color:#cbd5e1; font-size:13px; white-space:nowrap;
+}
+#opacity{ width:120px; }
+
+#back-link{
+  text-decoration:none; padding:6px 10px; border-radius:10px; background:#2b2f36; color:#e5e7eb;
 }
 
-#toolbar button.on {
-  background: #2e7d32;
-  border-color: #195a1c;
+/* статус + параметры */
+#status{ color:#9fb3c8; font-size:12px; }
+#params{
+  color:#e5e7eb; background:#1f2937; padding:6px 10px; border-radius:10px;
+  max-width:28vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 
-#toolbar button.off {
-  background: #6b2b2b;
-  border-color: #4a1a1a;
+/* Спрятанные слои */
+.layer-hidden{ display:none; }
+
+/* ===== tooltip ===== */
+#tooltip{
+  position:fixed; z-index:1100;
+  background:#111; color:#fff; padding:6px 8px; border-radius:8px;
+  font-size:12px; box-shadow:0 6px 18px rgba(0,0,0,.35);
+  pointer-events:none;
+  transform:translate(12px, 12px);
 }
 
-#toolbar input[type=range] {
-  cursor: pointer;
+/* ===== confirm panel ===== */
+#confirm-panel{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:10px; z-index:1100;
+  background:var(--card); color:var(--fg);
+  border:1px solid #0008; border-radius:14px; padding:10px 12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  display:flex; align-items:center; gap:12px;
+  max-width:min(92vw, 560px);
 }
-
-#status {
-  margin-left: auto;
-  font-size: 13px;
-  opacity: 0.7;
-}
-
-/* SVG интерактив */
-svg .pitch {
-  cursor: pointer;
-  transition: opacity 0.12s ease;
-}
-
-svg .pitch.hover {
-  opacity: 0.8;
-}
-
-svg .pitch.selected {
-  outline: 2px solid #ff9800;
-  outline-offset: 2px;
-}
-
-svg g.layer-hidden {
-  display: none !important;
-}
-
-.leaflet-overlay-pane svg,
-.leaflet-overlay-pane svg * { pointer-events: auto !important; }
+#confirm-panel .cp-title{ color:#9fb3c8; font-size:12px; }
+#confirm-panel .cp-name{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50vw; }
+#confirm-panel .cp-actions{ margin-left:auto; display:flex; gap:8px; }

@@ -1,298 +1,342 @@
-// === НАСТРОЙКИ ===
+// === КОНСТАНТЫ ===
 const SVG_URL = 'assets/masterplan.svg';
-
 const LAYER_LABELS = [
-  'pitches_60', 'pitches_80', 'pitches_100',
-  'sanitary', 'admin', 'playground', 'roads', 'border'
+  'pitches_60','pitches_80','pitches_100',
+  'sanitary','admin','playground','roads','border'
 ];
 
-// === СОЗДАНИЕ КАРТЫ ===
-const map = L.map('map', {
-  crs: L.CRS.Simple,
-  zoomControl: true,
-  minZoom: -4,
-});
-
+const map = L.map('map', { crs: L.CRS.Simple, zoomControl: true, minZoom: -4 });
 let svgRoot = null;
 let svgOverlay = null;
-let svgContainer = null;
 
 const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 const statusEl = $('#status');
 const opacityInp = $('#opacity');
+const tooltipEl = $('#tooltip');
+const cpEl = $('#confirm-panel');
+const cpNameEl = $('#cp-name');
+let selectedEl = null; // последний выбранный объект
 
+// === ИНИЦИАЛИЗАЦИЯ ===
 init().catch(err => setStatus('❌ ' + err.message));
+renderParamsSummary();
 
-// === ЗАГРУЗКА SVG ===
 async function init() {
   setStatus('Загружаю SVG…');
   const r = await fetch(SVG_URL + '?v=' + Date.now());
-  if (!r.ok) throw new Error(`Не удалось загрузить ${SVG_URL}: HTTP ${r.status}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const text = await r.text();
 
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
-  const errNode = doc.querySelector('parsererror');
-  if (errNode) throw new Error('Файл SVG повреждён.');
+  if (doc.querySelector('parsererror')) throw new Error('SVG повреждён');
 
   svgRoot = doc.documentElement;
   const vb = svgRoot.getAttribute('viewBox');
-  if (!vb) throw new Error('В SVG нет viewBox.');
+  if (!vb) throw new Error('Нет viewBox');
   const [, , width, height] = vb.split(/\s+/).map(Number);
-  const bounds = [[0, 0], [height, width]];
+  const bounds = [[0,0],[height,width]];
 
-  svgOverlay = L.svgOverlay(svgRoot, bounds, { 
-    opacity: 0.9,
-    interactive: true
-  }).addTo(map);
-  
+  svgOverlay = L.svgOverlay(svgRoot, bounds, { opacity: 0.9 }).addTo(map);
   map.fitBounds(bounds);
+
+  prepareSvg(svgRoot);
+  bindUI();
+
   setStatus(`SVG OK: ${Math.round(width)}×${Math.round(height)}`);
-
-  // Ждём пока Leaflet отрендерит SVG
-  setTimeout(() => {
-    // Находим SVG в DOM после того как Leaflet его добавил
-    svgContainer = document.querySelector('.leaflet-overlay-pane svg');
-    if (svgContainer) {
-      console.log('SVG найден в DOM');
-      prepareSvg(svgContainer);
-      bindUI();
-    } else {
-      console.error('SVG не найден в DOM!');
-    }
-  }, 100);
 }
 
-// === СЛОЙ ПОДСВЕТКИ ===
-function getSelectionLayer(svg) {
-  let layer = svg.querySelector('#__pitch_selection_layer__');
-  if (!layer) {
-    layer = document.createElementNS('http://www.w3.org/2000/svg','g');
-    layer.setAttribute('id','__pitch_selection_layer__');
-    layer.style.pointerEvents = 'none';
-    
-    // ВАЖНО: добавляем стили для видимости поверх всего
-    layer.style.isolation = 'isolate';
-    layer.style.mixBlendMode = 'normal';
-    
-    svg.appendChild(layer);
+// === ПОМОЩЬ ===
+function setStatus(t){ if(statusEl) statusEl.textContent = t; }
+function getLabelFrom(el){
+  // имя: data-name > id > ближайшая группа label
+  const id = el.getAttribute('id') || '';
+  const dataName = el.dataset.name || '';
+  const parentLabel = el.closest('g') && (
+    el.closest('g').getAttribute('inkscape:label') ||
+    el.closest('g').getAttribute('sodipodi:label') ||
+    el.closest('g').id || ''
+  ) || '';
+  const name = dataName || id || parentLabel || 'объект';
+  // номер — хвост цифр в id (например pitch_a12 -> 12)
+  const m = (id||'').match(/(\d+)(?!.*\d)/);
+  const num = m ? m[1] : '';
+  return { name, num, id };
+}
+function showTooltip(text, x, y){
+  tooltipEl.textContent = text;
+  tooltipEl.style.left = x + 'px';
+  tooltipEl.style.top = y + 'px';
+  tooltipEl.hidden = false;
+}
+function hideTooltip(){ tooltipEl.hidden = true; }
+function showConfirm(name){
+  cpNameEl.textContent = name;
+  cpEl.hidden = false;
+}
+function hideConfirm(){ cpEl.hidden = true; }
+
+// === ВСПОМОГАТЕЛЬНЫЕ ДЛЯ SVG ===
+function ensureLayer(id, {pointerNone=false, before=null}={}){
+  let g = svgRoot.querySelector('#'+CSS.escape(id));
+  if(!g){
+    g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('id', id);
+    if (pointerNone) g.setAttribute('style','pointer-events:none');
+    if (before) before.before(g); else svgRoot.appendChild(g);
   }
-  return layer;
+  return g;
+}
+function getSelectionLayer(){ return ensureLayer('__selection__', {pointerNone:true}); }
+function getHitLayer(){ const sel = getSelectionLayer(); return ensureLayer('__hit__', {before:sel}); }
+
+function parseStyle(styleStr=''){
+  const o={}; styleStr.split(';').forEach(p=>{ const [k,v]=p.split(':').map(s=>s&&s.trim()); if(k) o[k]=v; });
+  return o;
+}
+function isThinStrokeOrNoPaint(el){
+  const st = parseStyle(el.getAttribute('style')||'');
+  const fill = el.getAttribute('fill') ?? st.fill;
+  const stroke = el.getAttribute('stroke') ?? st.stroke;
+  const sw = (el.getAttribute('stroke-width') ?? st['stroke-width']) || '0';
+  const swNum = parseFloat(String(sw));
+  const noFill = !fill || fill === 'none';
+  const noStroke = !stroke || stroke === 'none' || isNaN(swNum) || swNum <= 0.01;
+  return noFill && noStroke;
+}
+function makeHitClone(el){
+  const c = el.cloneNode(true);
+  c.removeAttribute('id');
+  c.setAttribute('fill','none');
+  c.setAttribute('stroke','#000');
+  c.setAttribute('stroke-opacity','0.001');
+  c.setAttribute('stroke-width','12');
+  c.setAttribute('vector-effect','non-scaling-stroke');
+  c.setAttribute('pointer-events','all');
+  c.dataset.hit='1';
+  return c;
+}
+function makeHighlightClone(el, color='#ff9800'){
+  const c = el.cloneNode(true);
+  c.removeAttribute('id');
+  if (c.tagName !== 'use') c.setAttribute('fill','none');
+  c.setAttribute('stroke', color);
+  c.setAttribute('stroke-width','4');
+  c.setAttribute('stroke-opacity','1');
+  c.setAttribute('vector-effect','non-scaling-stroke');
+  c.setAttribute('pointer-events','none');
+  return c;
 }
 
-function makeHighlightClone(el, strokeColor='#ff9800') {
-  const clone = el.cloneNode(true);
-  clone.removeAttribute('id');
-  
-  // Убираем fill, делаем только обводку
-  clone.setAttribute('fill', 'none');
-  clone.setAttribute('fill-opacity', '0');
-  
-  // Толстая яркая обводка
-  clone.setAttribute('stroke', strokeColor);
-  clone.setAttribute('stroke-width', '8');
-  clone.setAttribute('stroke-opacity', '1');
-  clone.setAttribute('stroke-linejoin', 'round');
-  clone.setAttribute('stroke-linecap', 'round');
-  
-  // Отключаем масштабирование обводки
-  clone.setAttribute('vector-effect', 'non-scaling-stroke');
-  clone.style.pointerEvents = 'none';
-  
-  return clone;
-}
+// === ПОДГОТОВКА SVG ===
+function prepareSvg(svg){
+  const selLayer = getSelectionLayer();
+  const hitLayer = getHitLayer();
 
-// === РАБОТА С SVG ===
-function prepareSvg(svg) {
-  const groups = LAYER_LABELS.flatMap(lbl => findGroups(lbl, svg));
-  const SHAPE_SELECTOR = 'path,rect,polygon,polyline,circle,ellipse';
-  
-  const shapes = groups.flatMap(g => {
-    const layerName = getGroupLabel(g);
-    return Array.from(g.querySelectorAll(SHAPE_SELECTOR)).map(el => {
-      el.dataset.layer = layerName || '';
-      return el;
-    });
+  // найти слои по именам (расширенно)
+  const allGroups = Array.from(svg.querySelectorAll('g'));
+  const groups = allGroups.filter(g=>{
+    const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
+    return LAYER_LABELS.some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
   });
 
-  // Если shapes пустой, пробуем найти все фигуры напрямую
-  if (shapes.length === 0) {
-    console.warn('Не найдены фигуры через группы, ищу все фигуры...');
-    const allShapes = Array.from(svg.querySelectorAll(SHAPE_SELECTOR));
-    allShapes.forEach(el => {
-      const parent = el.closest('g');
-      el.dataset.layer = parent ? getGroupLabel(parent) : '';
-      shapes.push(el);
-    });
-  }
+  const SHAPE_SEL = 'path,rect,polygon,polyline,circle,ellipse,use';
+  const shapes = groups.flatMap(g=>{
+    const layerName = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'');
+    return Array.from(g.querySelectorAll(SHAPE_SEL)).map(el => (el.dataset.layer=layerName, el));
+  });
 
-  const selectionLayer = getSelectionLayer(svg);
-  let count = 0;
-
-  shapes.forEach(el => {
-    // КРИТИЧНО: отключаем все стили которые могут блокировать события
-    el.style.pointerEvents = 'all';
-    el.style.cursor = 'pointer';
+  let attached = 0;
+  shapes.forEach(el=>{
+    el.style.pointerEvents='all';
+    el.style.cursor='pointer';
     el.classList.add('pitch');
-    
-    // Добавляем атрибут напрямую
-    el.setAttribute('pointer-events', 'all');
 
-    // Удаляем старые обработчики если есть
-    const newEl = el.cloneNode(true);
-    el.parentNode.replaceChild(newEl, el);
-    
-    // hover - используем обычные события DOM
-    newEl.onmouseenter = function() {
-      if (this.dataset.sel === '1') return;
-      const existing = selectionLayer.querySelector('#__hover__');
-      if (existing) existing.remove();
-      
-      const hoverClone = makeHighlightClone(this, '#00bcd4'); // яркий голубой
-      hoverClone.setAttribute('id','__hover__');
-      selectionLayer.appendChild(hoverClone);
-      console.log('Hover:', this.id || 'no-id');
-    };
+    // hit-area
+    let hit=null;
+    if (isThinStrokeOrNoPaint(el)){
+      hit = makeHitClone(el);
+      hit.dataset.layer = el.dataset.layer;
+      hitLayer.appendChild(hit);
+    }
+    const target = hit || el;
 
-    newEl.onmouseleave = function() {
-      const prev = selectionLayer.querySelector('#__hover__');
+    // hover tooltip
+    target.addEventListener('mousemove', (ev)=>{
+      const {name, num} = getLabelFrom(el);
+      const label = num ? `${name} №${num}` : name;
+      showTooltip(label, ev.clientX+12, ev.clientY+12);
+    });
+    target.addEventListener('mouseleave', hideTooltip);
+
+    // hover highlight
+    target.addEventListener('mouseenter', ()=>{
+      if (el.dataset.sel==='1') return;
+      const hov = makeHighlightClone(el, '#ffb74d');
+      hov.id='__hover__';
+      getSelectionLayer().appendChild(hov);
+    });
+    target.addEventListener('mouseleave', ()=>{
+      const prev = getSelectionLayer().querySelector('#__hover__');
       if (prev) prev.remove();
-    };
+    });
 
-    // click
-    newEl.onclick = function(ev) {
+    // click select
+    target.addEventListener('click', (ev)=>{
       ev.stopPropagation();
-      ev.preventDefault();
-      
-      console.log('КЛИК!', this.id || 'no-id');
-      
-      const on = this.dataset.sel !== '1';
-      this.dataset.sel = on ? '1' : '0';
+      const on = el.dataset.sel !== '1';
+      el.dataset.sel = on ? '1' : '0';
 
-      // Удаляем старую подсветку
-      const oldId = this.dataset.selCloneId;
-      if (oldId) {
-        const old = selectionLayer.querySelector('#' + oldId);
+      // снять старую подсветку
+      if (el.dataset.selCloneId){
+        const old = document.getElementById(el.dataset.selCloneId);
         if (old) old.remove();
-        delete this.dataset.selCloneId;
+        delete el.dataset.selCloneId;
       }
+      if (on){
+        const sel = makeHighlightClone(el, '#ff9800');
+        const cid = '__sel__'+Math.random().toString(36).slice(2);
+        sel.id = cid;
+        getSelectionLayer().appendChild(sel);
+        el.dataset.selCloneId = cid;
 
-      // Добавляем новую если нужно
-      if (on) {
-        const clone = makeHighlightClone(this, '#ff9800');
-        const cid = '__sel__' + Math.random().toString(36).slice(2);
-        clone.setAttribute('id', cid);
-        selectionLayer.appendChild(clone);
-        this.dataset.selCloneId = cid;
+        selectedEl = el;
+        const {name, num, id} = getLabelFrom(el);
+        const label = num ? `${name} №${num}` : name || id;
+        showConfirm(label);
+        setStatus(`Выбрано: ${label}`);
+      } else {
+        selectedEl = null;
+        hideConfirm();
+        setStatus('Снято');
       }
+    });
 
-      const id = this.getAttribute('id') || '(без id)';
-      const layer = this.dataset.layer || '(без слоя)';
-      setStatus(`Объект: ${id} | слой: ${layer} — ${on ? 'выбран ✓' : 'снят'}`);
-    };
-
-    count++;
+    attached++;
   });
 
-  setStatus(`SVG загружен | кликабельных объектов: ${count}`);
-  console.log('Подготовлено объектов:', count);
+  setStatus(`${statusEl.textContent} | кликабельно: ${attached}`);
 }
 
-// === ПАНЕЛЬ УПРАВЛЕНИЯ ===
-function bindUI() {
-  // переключатели слоёв
-  $$('.toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
+// === UI КНОПКИ ===
+function bindUI(){
+  $$('.toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
       const lbl = btn.dataset.layer;
       const isOn = btn.classList.contains('on');
-      const newState = !isOn;
-      
-      setLayerVisible(lbl, newState);
-      btn.classList.toggle('on', newState);
-      btn.classList.toggle('off', !newState);
-      
-      setStatus(`Слой "${lbl}": ${newState ? 'показан' : 'скрыт'}`);
+      setLayerVisible(lbl, !isOn);
+      btn.classList.toggle('on', !isOn);
+      btn.classList.toggle('off', isOn);
     });
   });
 
-  // показать все
-  $('#btn-all')?.addEventListener('click', () => {
+  $('#btn-all')?.addEventListener('click', ()=>{
     LAYER_LABELS.forEach(l => setLayerVisible(l, true));
-    $$('.toggle').forEach(b => { 
-      b.classList.add('on'); 
-      b.classList.remove('off'); 
-    });
-    setStatus('Все слои показаны');
+    $$('.toggle').forEach(b=>{ b.classList.add('on'); b.classList.remove('off'); });
   });
-
-  // скрыть все
-  $('#btn-none')?.addEventListener('click', () => {
+  $('#btn-none')?.addEventListener('click', ()=>{
     LAYER_LABELS.forEach(l => setLayerVisible(l, false));
-    $$('.toggle').forEach(b => { 
-      b.classList.remove('on'); 
-      b.classList.add('off'); 
-    });
-    setStatus('Все слои скрыты');
+    $$('.toggle').forEach(b=>{ b.classList.remove('on'); b.classList.add('off'); });
   });
 
-  // прозрачность
-  opacityInp?.addEventListener('input', () => {
+  opacityInp?.addEventListener('input', ()=>{
     const v = Number(opacityInp.value)/100;
     if (svgOverlay) svgOverlay.setOpacity(v);
+    if (svgRoot) svgRoot.style.opacity = v;
   });
-}
 
-// === ВСПОМОГАТЕЛЬНЫЕ ===
-function getGroupLabel(g) {
-  return g.getAttribute('inkscape:label') || 
-         g.getAttribute('data-name') ||
-         g.getAttribute('id') || 
-         '';
-}
+  // confirm bar actions
+  $('#cp-cancel')?.addEventListener('click', ()=>{
+    hideConfirm();
+    if (selectedEl){
+      // снять выделение
+      selectedEl.dataset.sel='0';
+      if (selectedEl.dataset.selCloneId){
+        const old = document.getElementById(selectedEl.dataset.selCloneId);
+        if (old) old.remove();
+        delete selectedEl.dataset.selCloneId;
+      }
+      selectedEl=null;
+    }
+  });
 
-function groupSel(label) {
-  const escaped = cssEscape(label);
-  return [
-    `g[inkscape\\:label="${label}"]`,
-    `g#${escaped}`,
-    `g[data-name="${label}"]`,
-    `g[id*="${label}"]`
-  ].join(',');
-}
+  $('#cp-ok')?.addEventListener('click', ()=>{
+    if (!selectedEl) return;
+    const {name, num, id} = getLabelFrom(selectedEl);
+    const payload = {
+      type: 'pitch_selection',
+      id, name, number: num || null,
+      params: getAllParams()
+    };
 
-function findGroups(label, root = null) { 
-  const searchRoot = root || svgContainer || document;
-  const groups = $$(groupSel(label), searchRoot);
-  if (groups.length === 0) {
-    const allGroups = $$('g', searchRoot);
-    return allGroups.filter(g => {
-      const gLabel = getGroupLabel(g).toLowerCase();
-      return gLabel.includes(label.toLowerCase());
-    });
-  }
-  return groups;
-}
-
-function setLayerVisible(label, visible) { 
-  const groups = findGroups(label);
-  console.log(`Слой "${label}": найдено групп ${groups.length}, visible=${visible}`);
-  
-  groups.forEach(g => {
-    if (visible) {
-      g.style.display = '';
-      g.classList.remove('layer-hidden');
+    // Telegram Mini App?
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && typeof tg.sendData === 'function'){
+      tg.HapticFeedback?.impactOccurred?.('light');
+      tg.sendData(JSON.stringify(payload));
+      tg.close?.();
     } else {
-      g.style.display = 'none';
-      g.classList.add('layer-hidden');
+      // fallback: уведомление (или редирект по ?back=)
+      alert('Выбор отправлен: ' + JSON.stringify(payload, null, 2));
+      const back = new URLSearchParams(location.search).get('back');
+      if (back) location.href = back;
     }
   });
 }
 
-function cssEscape(s) { 
-  return s.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g,'\\$1'); 
+// === ПОКАЗ/СКРЫТИЕ СЛОЁВ ===
+function setLayerVisible(label, visible){
+  const esc = CSS.escape(label);
+  // оригиналы — по data-layer у фигур
+  $$( `[data-layer="${esc}"]`, svgRoot ).forEach(el=>{
+    if (el.dataset.hit === '1'){ el.style.display = visible ? '' : 'none'; }
+    else { el.classList.toggle('layer-hidden', !visible); }
+  });
+  // hit-клоны
+  $$( `[data-layer="${esc}"]`, getHitLayer() ).forEach(el=>{
+    el.style.display = visible ? '' : 'none';
+  });
 }
 
-function setStatus(t) { 
-  if (statusEl) statusEl.textContent = t; 
-  console.log('Status:', t);
+// === ПАРАМЕТРЫ БРОНИРОВАНИЯ ИЗ URL ===
+function getAllParams(){
+  const sp = new URLSearchParams(location.search);
+  const res = {};
+  for (const [k,v] of sp.entries()) res[k]=v;
+  return res;
+}
+function humanizeKey(k){
+  const map = {
+    checkin:'Заезд', checkout:'Выезд',
+    date_from:'Заезд', date_to:'Выезд',
+    adults:'Взрослые', kids:'Дети', children:'Дети',
+    nights:'Ночей', guests:'Гостей',
+    power:'Электричество', water:'Вода', car:'Авто', rv:'Кемпер', tent:'Палатка',
+    type:'Тип места', size:'Размер'
+  };
+  return map[k] || k;
+}
+function renderParamsSummary(){
+  const el = $('#params');
+  const p = getAllParams();
+  const keys = Object.keys(p);
+  if (!keys.length){ el.textContent = 'Ваш выбор: —'; return; }
+
+  const important = ['checkin','date_from','checkout','date_to','adults','kids','children','guests','nights','type','size','power','water','car','rv','tent'];
+  const ordered = keys.sort((a,b)=>{
+    const ia = important.indexOf(a), ib = important.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  const parts = [];
+  ordered.forEach(k=>{
+    const val = p[k];
+    if (val==null || val==='') return;
+    parts.push(`${humanizeKey(k)}: ${val}`);
+  });
+
+  el.textContent = 'Ваш выбор: ' + (parts.join(' · ') || '—');
 }

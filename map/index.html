@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Карта кемпинга</title>
+  <title>GoNature — Карта выбора места</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link
     rel="stylesheet"
@@ -14,33 +14,52 @@
 
 <body>
   <div id="toolbar">
-    <span>Слои:</span>
+    <div class="toolbar-left">
+      <span class="toolbar-label">Слои:</span>
 
-    <!-- pitches -->
-    <button class="toggle on" data-layer="pitches_60">60</button>
-    <button class="toggle on" data-layer="pitches_80">80</button>
-    <button class="toggle on" data-layer="pitches_100">100</button>
+      <!-- pitches -->
+      <button class="toggle on" data-layer="pitches_60">60</button>
+      <button class="toggle on" data-layer="pitches_80">80</button>
+      <button class="toggle on" data-layer="pitches_100">100</button>
 
-    <!-- new: service layers -->
-    <button class="toggle on" data-layer="sanitary">sanitary</button>
-    <button class="toggle on" data-layer="admin">admin</button>
-    <button class="toggle on" data-layer="playground">playground</button>
-    <button class="toggle on" data-layer="roads">roads</button>
-    <button class="toggle on" data-layer="border">border</button>
+      <!-- остальные -->
+      <button class="toggle on" data-layer="sanitary">sanitary</button>
+      <button class="toggle on" data-layer="admin">admin</button>
+      <button class="toggle on" data-layer="playground">playground</button>
+      <button class="toggle on" data-layer="roads">roads</button>
+      <button class="toggle on" data-layer="border">border</button>
 
-    <button id="btn-all">Все</button>
-    <button id="btn-none">Скрыть</button>
+      <button id="btn-all" class="ghost">Все</button>
+      <button id="btn-none" class="ghost">Скрыть</button>
 
-    <label style="margin-left:12px">
-      Прозрачность:
-      <input id="opacity" type="range" min="20" max="100" value="90" />
-    </label>
+      <label class="opacity-wrap">
+        Прозрачность:
+        <input id="opacity" type="range" min="30" max="100" value="90" />
+      </label>
 
-    <span id="status">—</span>
-    <a href="../index.html" style="margin-left:auto;color:#fff;text-decoration:none;">← Назад к форме</a>
+      <a id="back-link" href="../index.html" class="ghost">← Назад к форме</a>
+    </div>
+
+    <div class="toolbar-right">
+      <div id="params" title="Параметры бронирования">Ваш выбор: —</div>
+      <span id="status">—</span>
+    </div>
   </div>
 
   <div id="map"></div>
+
+  <!-- всплывающая подсказка -->
+  <div id="tooltip" hidden></div>
+
+  <!-- панель подтверждения выбора -->
+  <div id="confirm-panel" hidden>
+    <div class="cp-title">Вы выбрали:</div>
+    <div class="cp-name" id="cp-name">—</div>
+    <div class="cp-actions">
+      <button id="cp-cancel" class="ghost">Отмена</button>
+      <button id="cp-ok" class="primary">Подтвердить</button>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="app.js"></script>
