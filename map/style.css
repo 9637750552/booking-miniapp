@@ -72,3 +72,6 @@ svg .pitch.selected {
 svg g.layer-hidden {
   display: none !important;
 }
+
+.leaflet-overlay-pane svg,
+.leaflet-overlay-pane svg * { pointer-events: auto !important; }

@@ -15,15 +15,27 @@
 <body>
   <div id="toolbar">
     <span>Слои:</span>
+
+    <!-- pitches -->
     <button class="toggle on" data-layer="pitches_60">60</button>
     <button class="toggle on" data-layer="pitches_80">80</button>
     <button class="toggle on" data-layer="pitches_100">100</button>
+
+    <!-- new: service layers -->
+    <button class="toggle on" data-layer="sanitary">sanitary</button>
+    <button class="toggle on" data-layer="admin">admin</button>
+    <button class="toggle on" data-layer="playground">playground</button>
+    <button class="toggle on" data-layer="roads">roads</button>
+    <button class="toggle on" data-layer="border">border</button>
+
     <button id="btn-all">Все</button>
     <button id="btn-none">Скрыть</button>
+
     <label style="margin-left:12px">
       Прозрачность:
       <input id="opacity" type="range" min="20" max="100" value="90" />
     </label>
+
     <span id="status">—</span>
     <a href="../index.html" style="margin-left:auto;color:#fff;text-decoration:none;">← Назад к форме</a>
   </div>
