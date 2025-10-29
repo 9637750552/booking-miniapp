@@ -10,9 +10,11 @@ const map = L.map('map', { crs: L.CRS.Simple, zoomControl: false, minZoom: -4 })
 let svgRoot = null;
 let svgOverlay = null;
 
+// утилиты
 const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
+// UI ссылки
 const tooltipEl   = $('#tooltip');
 const selectedLbl = $('#selected-label');
 const btnCancel   = $('#cp-cancel');
@@ -20,12 +22,12 @@ const btnOk       = $('#cp-ok');
 
 let selectedEl = null;
 
-// init
 init().then(()=>{
   wireUI();
   renderBookingSummary();
-}).catch(err => console.error(err));
+}).catch(console.error);
 
+// === загрузка и подготовка ===
 async function init(){
   const r = await fetch(SVG_URL + '?v=' + Date.now());
   if (!r.ok) throw new Error(`SVG load error: ${r.status}`);
@@ -52,23 +54,48 @@ function wireUI(){
   $('#zoom-in').addEventListener('click', ()=>map.zoomIn());
   $('#zoom-out').addEventListener('click', ()=>map.zoomOut());
 
-  // back link — если есть ?back= в URL, используем его
-  const backParam = new URLSearchParams(location.search).get('back');
-  const backLink = $('#back-link');
-  backLink.href = backParam || '../index.html';
+  // back (стрелка): ?back= если есть, иначе ../index.html
+  const back = new URLSearchParams(location.search).get('back') || '../index.html';
+  $('#back-btn').addEventListener('click', ()=>location.href = back);
 
-  // layer toggles
-  $$('.toggle').forEach(btn=>{
+  // три основные кнопки
+  $$('.toggle[data-layer]').forEach(btn=>{
+    const layer = btn.dataset.layer;
     btn.addEventListener('click', ()=>{
-      const lbl = btn.dataset.layer;
-      const isOn = btn.classList.contains('on');
-      setLayerVisible(lbl, !isOn);
-      btn.classList.toggle('on', !isOn);
-      btn.classList.toggle('off', isOn);
+      const on = !btn.classList.contains('on');
+      setLayerVisible(layer, on);
+      btn.classList.toggle('on', on);
+      btn.classList.toggle('off', !on);
     });
   });
 
-  // confirm bar actions
+  // выпадающее меню
+  const moreBtn = $('#more-btn');
+  const menu = $('#layers-menu');
+  moreBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const open = menu.hidden;
+    menu.hidden = !open;
+    moreBtn.setAttribute('aria-expanded', String(open));
+  });
+  // чекбоксы слоя
+  $$('#layers-menu input[type="checkbox"]').forEach(ch=>{
+    ch.addEventListener('change', ()=>{
+      setLayerVisible(ch.dataset.layer, ch.checked);
+      // подсветим состояние на случай если те же слои есть отдельными кнопками (у нас нет — но пусть будет)
+      const btn = $(`.toggle[data-layer="${CSS.escape(ch.dataset.layer)}"]`);
+      if (btn) { btn.classList.toggle('on', ch.checked); btn.classList.toggle('off', !ch.checked); }
+    });
+  });
+  // клик вне меню — закрыть
+  document.addEventListener('click', (e)=>{
+    if (!menu.hidden && !menu.contains(e.target) && e.target !== moreBtn) {
+      menu.hidden = true;
+      moreBtn.setAttribute('aria-expanded','false');
+    }
+  });
+
+  // confirm bar
   btnCancel.addEventListener('click', clearSelection);
   btnOk.addEventListener('click', submitSelection);
 }
@@ -125,7 +152,7 @@ function makeHitClone(el){
   c.setAttribute('fill','none');
   c.setAttribute('stroke','#000');
   c.setAttribute('stroke-opacity','0.001');
-  c.setAttribute('stroke-width','12');
+  c.setAttribute('stroke-width','14');
   c.setAttribute('vector-effect','non-scaling-stroke');
   c.setAttribute('pointer-events','all');
   c.dataset.hit='1';
@@ -153,7 +180,7 @@ function getReadableLabel(el){
   return num ? `${name} №${num}` : name;
 }
 
-// === основная подготовка интерактива ===
+// === подготовка интерактива (Pointer Events для тача/мыши) ===
 function prepareSvg(svg){
   const selLayer = getSelectionLayer();
   const hitLayer = getHitLayer();
@@ -174,7 +201,6 @@ function prepareSvg(svg){
     el.style.pointerEvents='all';
     el.style.cursor='pointer';
 
-    // hit-area для тонких объектов
     let hit = null;
     if (isThinStrokeOrNoPaint(el)){
       hit = makeHitClone(el);
@@ -183,30 +209,46 @@ function prepareSvg(svg){
     }
     const target = hit || el;
 
-    // tooltip
-    target.addEventListener('mousemove', (ev)=>{
+    // защита от «перетаскивания» — не выбираем, если смещение > 6px
+    let downPos = null;
+
+    target.addEventListener('pointerdown', (ev)=>{
+      downPos = {x: ev.clientX, y: ev.clientY, type: ev.pointerType};
+    });
+
+    // hover — только мышь
+    target.addEventListener('pointerenter', (ev)=>{
+      if (ev.pointerType !== 'mouse') return;
+      if (el.dataset.sel==='1') return;
+      const hov = makeHighlightClone(el, '#ff9aa0'); // светло-красный
+      hov.id='__hover__';
+      selLayer.appendChild(hov);
+    });
+    target.addEventListener('pointerleave', (ev)=>{
+      if (ev.pointerType !== 'mouse') return;
+      const prev = selLayer.querySelector('#__hover__');
+      if (prev) prev.remove();
+      tooltipEl.hidden = true;
+    });
+
+    // tooltip — только мышь
+    target.addEventListener('pointermove', (ev)=>{
+      if (ev.pointerType !== 'mouse') return;
       tooltipEl.textContent = getReadableLabel(el);
       tooltipEl.style.left = (ev.clientX + 12) + 'px';
       tooltipEl.style.top  = (ev.clientY + 12) + 'px';
       tooltipEl.hidden = false;
     });
-    target.addEventListener('mouseleave', ()=>{ tooltipEl.hidden = true; });
 
-    // hover highlight — светло-красный
-    target.addEventListener('mouseenter', ()=>{
-      if (el.dataset.sel==='1') return;
-      const hov = makeHighlightClone(el, '#ff9aa0');
-      hov.id='__hover__';
-      selLayer.appendChild(hov);
-    });
-    target.addEventListener('mouseleave', ()=>{
-      const prev = selLayer.querySelector('#__hover__');
-      if (prev) prev.remove();
-    });
+    // выбор — pointerup (и мышь, и тач)
+    target.addEventListener('pointerup', (ev)=>{
+      // если перетаскивали — игнор
+      if (downPos) {
+        const dx = Math.abs(ev.clientX - downPos.x);
+        const dy = Math.abs(ev.clientY - downPos.y);
+        if (dx > 6 || dy > 6) return;
+      }
 
-    // click: toggle selection, выделение — красным
-    target.addEventListener('click', (ev)=>{
-      ev.stopPropagation();
       const nowSelected = el.dataset.sel === '1';
       const turnOn = !nowSelected;
       el.dataset.sel = turnOn ? '1' : '0';
@@ -247,7 +289,7 @@ function setLayerVisible(label, visible){
   });
 }
 
-// очистка выбора (кнопка «Отмена» или повторный клик)
+// очистка выбора
 function clearSelection(){
   tooltipEl.hidden = true;
   if (!selectedEl){ selectedLbl.textContent = '—'; btnOk.disabled = btnCancel.disabled = true; return; }
@@ -262,7 +304,7 @@ function clearSelection(){
   btnOk.disabled = btnCancel.disabled = true;
 }
 
-// подтверждение выбора
+// подтверждение
 function submitSelection(){
   if (!selectedEl) return;
   const payload = {

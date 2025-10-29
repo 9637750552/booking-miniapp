@@ -15,23 +15,23 @@
         <button class="toggle on" data-layer="pitches_60">60</button>
         <button class="toggle on" data-layer="pitches_80">80</button>
         <button class="toggle on" data-layer="pitches_100">100</button>
-      </div>
-
-      <!-- Горизонтальный скролл остальных слоёв -->
-      <div class="more-layers" id="more-layers">
-        <button class="toggle on" data-layer="sanitary">sanitary</button>
-        <button class="toggle on" data-layer="admin">admin</button>
-        <button class="toggle on" data-layer="playground">playground</button>
-        <button class="toggle on" data-layer="roads">roads</button>
-        <button class="toggle on" data-layer="border">border</button>
+        <!-- Кнопка с меню слоёв -->
+        <button id="more-btn" class="toggle ghost" aria-haspopup="true" aria-expanded="false">⋯</button>
+        <div id="layers-menu" role="menu" hidden>
+          <label><input type="checkbox" data-layer="sanitary" checked> sanitary</label>
+          <label><input type="checkbox" data-layer="admin" checked> admin</label>
+          <label><input type="checkbox" data-layer="playground" checked> playground</label>
+          <label><input type="checkbox" data-layer="roads" checked> roads</label>
+          <label><input type="checkbox" data-layer="border" checked> border</label>
+        </div>
       </div>
     </div>
 
     <div class="right">
-      <a id="back-link" class="link">← Назад</a>
+      <button id="back-btn" class="round" title="Назад" aria-label="Назад">←</button>
       <div class="zoom">
-        <button id="zoom-in"  aria-label="Приблизить">+</button>
-        <button id="zoom-out" aria-label="Отдалить">−</button>
+        <button id="zoom-in"  class="round" aria-label="Приблизить">+</button>
+        <button id="zoom-out" class="round" aria-label="Отдалить">−</button>
       </div>
     </div>
   </header>
@@ -39,7 +39,7 @@
   <!-- Карта -->
   <main id="map"></main>
 
-  <!-- Тонкий tooltip по ховеру -->
+  <!-- tooltip -->
   <div id="tooltip" hidden></div>
 
   <!-- Нижняя панель выбора -->
