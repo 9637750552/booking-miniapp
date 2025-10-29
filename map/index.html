@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <title>GoNature — Выбор места на карте</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -17,11 +19,11 @@
     </div>
 
     <div class="right">
-      <!-- ТОЛЬКО ТЕКСТОВЫЕ СИМВОЛЫ, без svg/эмодзи -->
-      <button id="back-btn" class="round" title="Назад" aria-label="Назад">←</button>
+      <!-- Текстовые кнопки -->
+      <button id="back-btn" class="round" title="Назад">←</button>
       <div class="zoom">
-        <button id="zoom-in"  class="round" aria-label="Приблизить">+</button>
-        <button id="zoom-out" class="round" aria-label="Отдалить">−</button>
+        <button id="zoom-in"  class="round" title="Приблизить">+</button>
+        <button id="zoom-out" class="round" title="Отдалить">−</button>
       </div>
     </div>
   </header>
@@ -29,7 +31,7 @@
   <!-- Карта -->
   <main id="map"></main>
 
-  <!-- Нижняя панель выбора -->
+  <!-- Нижняя панель -->
   <footer id="bottombar">
     <div class="row">
       <div class="chosen">
@@ -41,7 +43,6 @@
         <button id="cp-ok" class="primary" disabled>Подтвердить</button>
       </div>
     </div>
-
     <div class="row secondary">
       <div id="booking-summary" class="muted">Даты бронирования: —</div>
     </div>
