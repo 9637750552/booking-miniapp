@@ -1,12 +1,20 @@
-// === НАСТРОЙКИ ===
-const SVG_URL = 'assets/masterplan.svg';
-// интерактив только для питчей
-const PITCH_LAYERS = ['pitches_60','pitches_80','pitches_100'];
+// === НАСТРОЙКИ АНТИ-КЭШ ===
+const APP_VERSION = (typeof window !== 'undefined' && window.__APP_VERSION__) ? String(window.__APP_VERSION__) : '1';
 
 // === КАРТА ===
-const map = L.map('map', { crs: L.CRS.Simple, zoomControl: false, minZoom: -4 });
+const map = L.map('map', {
+  crs: L.CRS.Simple,
+  zoomControl: false,
+  minZoom: -4,
+  attributionControl: false, // без watermark
+});
+map.attributionControl?.remove?.();
+
 let svgRoot = null;
 let svgOverlay = null;
+
+// интерактив только для питчей
+const PITCH_LAYERS = ['pitches_60','pitches_80','pitches_100'];
 
 // утилиты
 const $  = (s, r=document)=>r.querySelector(s);
@@ -26,7 +34,9 @@ init().then(()=>{
 
 // === загрузка и подготовка ===
 async function init(){
-  const r = await fetch(SVG_URL + '?v=' + Date.now());
+  // SVG с версией + no-store как страховка
+  const svgUrl = `assets/masterplan.svg?v=${encodeURIComponent(APP_VERSION)}`;
+  const r = await fetch(svgUrl, { cache: 'no-store' });
   if (!r.ok) throw new Error(`SVG load error: ${r.status}`);
   const text = await r.text();
 
@@ -39,7 +49,7 @@ async function init(){
   const [ , , w, h ] = vb.split(/\s+/).map(Number);
 
   const bounds = [[0,0],[h,w]];
-  svgOverlay = L.svgOverlay(svgRoot, bounds, { opacity: 0.98 }).addTo(map);
+  svgOverlay = L.svgOverlay(svgRoot, bounds, { opacity: 0.98, interactive: false }).addTo(map);
   map.fitBounds(bounds);
 
   prepareSvg(svgRoot);
@@ -55,7 +65,7 @@ function wireUI(){
   const back = new URLSearchParams(location.search).get('back') || '../index.html';
   $('#back-btn').addEventListener('click', ()=>location.href = back);
 
-  // три кнопки питчей (показ/скрытие)
+  // три кнопки слоёв (показ/скрытие)
   $$('.toggle[data-layer]').forEach(btn=>{
     const layer = btn.dataset.layer;
     btn.addEventListener('click', ()=>{
@@ -66,7 +76,6 @@ function wireUI(){
     });
   });
 
-  // confirm bar
   btnCancel.addEventListener('click', clearSelection);
   btnOk.addEventListener('click', submitSelection);
 }
@@ -80,7 +89,6 @@ function getParams(){
 function renderBookingSummary(){
   const el = $('#booking-summary');
   const p = getParams();
-
   const getFirst = (...keys)=>keys.find(k=>p[k]!=null && p[k] !== '');
   const ciKey = getFirst('checkin','date_from','from','arrival','start','checkin_date','check_in','dateStart','start_date');
   const coKey = getFirst('checkout','date_to','to','departure','end','checkout_date','check_out','dateEnd','end_date');
@@ -110,11 +118,7 @@ function ensureLayer(id, {pointerNone=false, before=null}={}){
   return g;
 }
 function getSelectionLayer(){ return ensureLayer('__selection__', {pointerNone:true}); }
-
-function parseStyle(styleStr=''){
-  const o={}; styleStr.split(';').forEach(p=>{ const [k,v]=p.split(':').map(s=>s&&s.trim()); if(k) o[k]=v; });
-  return o;
-}
+function parseStyle(styleStr=''){ const o={}; styleStr.split(';').forEach(p=>{ const [k,v]=p.split(':').map(s=>s&&s.trim()); if(k) o[k]=v; }); return o; }
 function isThinStrokeOrNoPaint(el){
   const st = parseStyle(el.getAttribute('style')||'');
   const fill = el.getAttribute('fill') ?? st.fill;
@@ -159,15 +163,13 @@ function getReadableLabel(el){
   return num ? `${name} №${num}` : name;
 }
 
-// === подготовка интерактива (только питчи, БЕЗ hover-подсветки) ===
+// === подготовка интерактива (только питчи, без hover) ===
 function prepareSvg(svg){
   const selLayer = getSelectionLayer();
 
-  // соберём фигуры из групп pitch-слоёв
-  const allGroups = Array.from(svg.querySelectorAll('g'));
-  const groups = allGroups.filter(g=>{
+  const groups = Array.from(svg.querySelectorAll('g')).filter(g=>{
     const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
-    return PITCH_LAYERS.some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
+    return ['pitches_60','pitches_80','pitches_100'].some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
   });
 
   const SHAPES = 'path,rect,polygon,polyline,circle,ellipse,use';
@@ -176,8 +178,12 @@ function prepareSvg(svg){
     return Array.from(g.querySelectorAll(SHAPES)).map(el => (el.dataset.layer=layerName, el));
   });
 
-  // для тонких контуров делаем невидимую "hit"-область
-  const hitLayer = (()=>{ const sel = getSelectionLayer(); let h = svg.querySelector('#__hit__'); if(!h){ h=document.createElementNS('http://www.w3.org/2000/svg','g'); h.id='__hit__'; sel.before(h);} return h; })();
+  let hitRoot = svg.querySelector('#__hit__');
+  if (!hitRoot){
+    hitRoot = document.createElementNS('http://www.w3.org/2000/svg','g');
+    hitRoot.id = '__hit__';
+    getSelectionLayer().before(hitRoot);
+  }
 
   shapes.forEach(el=>{
     el.style.pointerEvents='all';
@@ -187,21 +193,20 @@ function prepareSvg(svg){
     if (isThinStrokeOrNoPaint(el)){
       const hit = makeHitClone(el);
       hit.dataset.layer = el.dataset.layer;
-      hitLayer.appendChild(hit);
+      hitRoot.appendChild(hit);
       target = hit;
     }
 
-    // считаем «кликом» только короткое нажатие без сдвига
     let downPos = null;
-    target.addEventListener('pointerdown', (ev)=>{
-      downPos = {x: ev.clientX, y: ev.clientY};
+    target.addEventListener('pointerdown', ev=>{
+      downPos = { x: ev.clientX ?? 0, y: ev.clientY ?? 0 };
     }, {passive:true});
 
-    target.addEventListener('pointerup', (ev)=>{
+    target.addEventListener('pointerup', ev=>{
       let isClick = true;
       if (downPos){
-        const dx = Math.abs(ev.clientX - downPos.x);
-        const dy = Math.abs(ev.clientY - downPos.y);
+        const dx = Math.abs((ev.clientX ?? 0) - downPos.x);
+        const dy = Math.abs((ev.clientY ?? 0) - downPos.y);
         if (dx > 6 || dy > 6) isClick = false;
       }
       downPos = null;
@@ -210,13 +215,11 @@ function prepareSvg(svg){
       ev.stopPropagation();
       ev.preventDefault();
 
-      const isSame = selectedEl === el;
-      if (isSame) { clearSelection(); return; }   // повторный клик — снять
-
-      if (selectedEl) clearSelection();          // одиночный выбор
+      if (selectedEl === el){ clearSelection(); return; }
+      if (selectedEl) clearSelection();
 
       el.dataset.sel = '1';
-      const sel = makeHighlightClone(el, '#ff3b30'); // КРАСНАЯ рамка выбора
+      const sel = makeHighlightClone(el, '#ff3b30');  // красная рамка
       const cid = '__sel__'+Math.random().toString(36).slice(2);
       sel.id = cid;
       selLayer.appendChild(sel);
@@ -231,10 +234,9 @@ function prepareSvg(svg){
   });
 }
 
-// показать/скрыть слой по имени
+// показать/скрыть слой
 function setLayerVisible(label, visible){
   const esc = CSS.escape(label);
-  // элементы слоя и их hit-клоны
   $$(`[data-layer="${esc}"]`, svgRoot).forEach(el=>{
     if (el.dataset.hit === '1') el.style.display = visible ? '' : 'none';
     else el.classList.toggle('layer-hidden', !visible);

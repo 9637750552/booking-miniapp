@@ -4,10 +4,30 @@
   <meta charset="utf-8" />
   <title>GoNature — Выбор места на карте</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        crossorigin />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
+
+  <!-- Anti-cache bootstrap: вычисляем версию и подключаем статику с ?v=... -->
+  <script>
+    (function () {
+      const qs = new URLSearchParams(location.search);
+      // приоритет: вручную заданный v=..., затем dev=1 -> timestamp, иначе фиксированная "1"
+      const v = qs.get('v') || (qs.has('dev') ? Date.now() : '1');
+      window.__APP_VERSION__ = String(v);
+
+      // style.css?v=...
+      const style = document.createElement('link');
+      style.rel = 'stylesheet';
+      style.href = 'style.css?v=' + window.__APP_VERSION__;
+      document.head.appendChild(style);
+
+      // app.js?v=...
+      const script = document.createElement('script');
+      script.defer = true;
+      script.src = 'app.js?v=' + window.__APP_VERSION__;
+      document.head.appendChild(script);
+    })();
+  </script>
 </head>
 <body>
   <!-- Верхняя панель -->
@@ -19,11 +39,11 @@
     </div>
 
     <div class="right">
-      <!-- Текстовые кнопки -->
-      <button id="back-btn" class="round" title="Назад">←</button>
+      <!-- текстовые кнопки, без emoji-шрифтов -->
+      <button id="back-btn" class="round" title="Назад" aria-label="Назад">←</button>
       <div class="zoom">
-        <button id="zoom-in"  class="round" title="Приблизить">+</button>
-        <button id="zoom-out" class="round" title="Отдалить">−</button>
+        <button id="zoom-in"  class="round" aria-label="Приблизить">+</button>
+        <button id="zoom-out" class="round" aria-label="Отдалить">−</button>
       </div>
     </div>
   </header>
@@ -49,6 +69,6 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
-  <script src="app.js"></script>
+  <!-- app.js подключается динамически выше, с версией -->
 </body>
 </html>
