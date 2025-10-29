@@ -27,7 +27,7 @@ html,body{
   top:0;
   z-index:1000;
   display:flex;
-  align-items:center;
+  align-items:center;              /* всё по вертикали строго по центру */
   justify-content:space-between;
   gap:8px;
   padding:8px 10px;
@@ -36,57 +36,47 @@ html,body{
   border-bottom:1px solid #0007;
 }
 #topbar .left{
-  display:flex;
-  align-items:center;
-  gap:6px;
+  display:flex; align-items:center; gap:6px;
 }
 #topbar .right{
-  display:flex;
-  align-items:center;
-  gap:8px;
+  display:flex; align-items:center; gap:8px;
 }
 
 /* кнопки слоёв */
 button{
-  border:0;
-  border-radius:10px;
-  padding:6px 10px;
-  font-size:13px;
-  cursor:pointer;
-  white-space:nowrap;
+  border:0; border-radius:10px; padding:6px 10px;
+  font-size:13px; cursor:pointer; white-space:nowrap;
 }
-button.toggle{
-  background:var(--chip);
-  color:#fff;
-}
+button.toggle{ background:var(--chip); color:#fff; }
 button.toggle.on{ background:var(--chip-on); }
-button.toggle.off{
-  background:var(--chip-off);
-  color:#cbd5e1;
-}
+button.toggle.off{ background:var(--chip-off); color:#cbd5e1; }
 
 button.ghost{ background:#e6e8ec; color:#1b2331; }
 button.primary{ background:var(--accent); color:#fff; }
 
-/* ← + − — одинаковые текстовые кнопки; фиксируем шрифт, чтобы не подменялся на эмодзи */
+/* round-кнопки: одинаковый фон и геометрия */
 .round{
-  width:44px;
-  height:44px;
-  display:inline-grid;
-  place-items:center;
-  border-radius:12px;
-  background:#2b2f36;
-  color:#ffffff;
-  font-family: "Segoe UI", Roboto, Arial, Helvetica, sans-serif; /* без emoji */
-  font-weight:800;
-  font-size:22px;      /* одинаковый размер символов */
-  line-height:1;
-  text-align:center;
-  letter-spacing:0;    /* чтобы + и − выглядели одинаково плотными */
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+  width:44px; height:44px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:12px; background:#2b2f36; color:#fff;
+  line-height:1; text-align:center;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
 }
 .round:active{ background:#3c3f45; }
 #topbar .zoom{ display:flex; gap:6px; align-items:center; }
+
+/* иконки внутри round — единый размер и цвет для всех браузеров */
+.round .icon{
+  width:22px; height:22px; display:block;
+}
+.round .icon line,
+.round .icon polyline,
+.round .icon path,
+.round .icon rect,
+.round .icon circle {
+  stroke:#ffffff; stroke-width:2.4; fill:none;
+  stroke-linecap:round; stroke-linejoin:round;
+}
 
 /* карта */
 #map{
@@ -97,20 +87,13 @@ button.primary{ background:var(--accent); color:#fff; }
 
 /* нижняя панель */
 #bottombar{
-  position:sticky;
-  bottom:0;
-  z-index:900;
-  background:var(--surface);
-  box-shadow:0 -4px 14px rgba(0,0,0,.08);
-  padding:10px 12px;
-  border-top:1px solid rgba(0,0,0,.08);
+  position:sticky; bottom:0; z-index:900;
+  background:var(--surface); box-shadow:0 -4px 14px rgba(0,0,0,.08);
+  padding:10px 12px; border-top:1px solid rgba(0,0,0,.08);
 }
 #bottombar .row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; flex-wrap:wrap;
 }
 #bottombar .row.secondary{ margin-top:6px; }
 .chosen{ display:flex; align-items:center; gap:8px; min-height:32px; }
