@@ -29,25 +29,16 @@ button.toggle.off{ background:var(--chip-off); color:#cbd5e1; }
 button.ghost{ background:#e6e8ec; color:#1b2331; }
 button.primary{ background:var(--accent); color:#fff; }
 
-/* Кнопки ← / + / − (SVG внутри) */
+/* ← + − — текстовые, одинаковые */
 .round{
-  width:44px; height:44px;
-  display:flex; align-items:center; justify-content:center;
+  width:44px; height:44px; display:flex; align-items:center; justify-content:center;
   border-radius:12px; background:#2b2f36; color:#fff;
-  line-height:1; text-align:center; user-select:none;
+  font-family:"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
+  font-size:24px; font-weight:700; line-height:1; text-align:center; user-select:none;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
 }
 .round:active{ background:#3c3f45; }
 #topbar .zoom{ display:flex; gap:6px; align-items:center; }
-
-/* SVG-иконки: единый размер и цвет во всех браузерах */
-.round .icon{ width:22px; height:22px; display:block; }
-.round .icon line,
-.round .icon polyline,
-.round .icon path{
-  stroke:#ffffff; stroke-width:2.4; fill:none;
-  stroke-linecap:round; stroke-linejoin:round;
-}
 
 /* Карта */
 #map{ width:100%; height:calc(100vh - 62px - 92px); background:#d9dee6; }
@@ -68,9 +59,11 @@ button.primary{ background:var(--accent); color:#fff; }
 /* Скрытые слои */
 .layer-hidden{ display:none; }
 
-/* Прячем watermark Leaflet и дефолтный зум */
+/* Прячем watermark Leaflet */
 #map .leaflet-control-attribution,
 #map .leaflet-control-logo { display:none !important; }
+
+/* Также скрыт стандартный zoom Leaflet (мы используем свои кнопки) */
 .leaflet-control-zoom{ display:none !important; }
 
 /* Мобильные */
