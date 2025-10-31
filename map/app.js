@@ -1,41 +1,36 @@
-// === НАСТРОЙКИ АНТИ-КЭШ ===
-const APP_VERSION = (typeof window !== 'undefined' && window.__APP_VERSION__) ? String(window.__APP_VERSION__) : '1';
+// ============================================================
+// map/app.js — карта выбора участка
+// • Получает все параметры формы из URL (from,to,guests,children_ages,phone,email)
+// • При подтверждении ДОБАВЛЯЕТ pitch_id/pitch_name/layer и возвращает в ../index.html
+//   сохранив исходные параметры (чтобы форма восстановилась и показала участок).
+// ============================================================
 
-// === КАРТА ===
 const map = L.map('map', {
   crs: L.CRS.Simple,
   zoomControl: false,
   minZoom: -4,
-  attributionControl: false, // без watermark
+  attributionControl: false,
 });
 map.attributionControl?.remove?.();
 
 let svgRoot = null;
 let svgOverlay = null;
-
-// интерактив только для питчей
 const PITCH_LAYERS = ['pitches_60','pitches_80','pitches_100'];
 
-// утилиты
 const $  = (s, r=document)=>r.querySelector(s);
 const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
-// UI
 const selectedLbl = $('#selected-label');
 const btnCancel   = $('#cp-cancel');
 const btnOk       = $('#cp-ok');
 
 let selectedEl = null;
 
-init().then(()=>{
-  wireUI();
-  renderBookingSummary();
-}).catch(console.error);
+init().then(()=>{ wireUI(); }).catch(console.error);
 
 // === загрузка и подготовка ===
 async function init(){
-  // SVG с версией + no-store как страховка
-  const svgUrl = `assets/masterplan.svg?v=${encodeURIComponent(APP_VERSION)}`;
+  const svgUrl = `./assets/masterplan.svg`;
   const r = await fetch(svgUrl, { cache: 'no-store' });
   if (!r.ok) throw new Error(`SVG load error: ${r.status}`);
   const text = await r.text();
@@ -57,53 +52,27 @@ async function init(){
 
 // === UI ===
 function wireUI(){
-  // zoom
   $('#zoom-in').addEventListener('click', ()=>map.zoomIn());
   $('#zoom-out').addEventListener('click', ()=>map.zoomOut());
 
-  // back (стрелка): ?back= если есть, иначе ../index.html
-  const back = new URLSearchParams(location.search).get('back') || '../index.html';
-  $('#back-btn').addEventListener('click', ()=>location.href = back);
+  // Назад: просто вернуться с исходными параметрами (если были)
+  $('#back-btn').addEventListener('click', ()=>{
+    const base = '../index.html';
+    const qs = location.search;
+    location.href = qs ? `${base}${qs}` : base;
+  });
 
-  // три кнопки слоёв (показ/скрытие)
   $$('.toggle[data-layer]').forEach(btn=>{
     const layer = btn.dataset.layer;
     btn.addEventListener('click', ()=>{
       const on = !btn.classList.contains('on');
       setLayerVisible(layer, on);
       btn.classList.toggle('on', on);
-      btn.classList.toggle('off', !on);
     });
   });
 
   btnCancel.addEventListener('click', clearSelection);
   btnOk.addEventListener('click', submitSelection);
-}
-
-// === BOOKING INFO ===
-function getParams(){
-  const p = {};
-  for (const [k,v] of new URLSearchParams(location.search).entries()) p[k]=v;
-  return p;
-}
-function renderBookingSummary(){
-  const el = $('#booking-summary');
-  const p = getParams();
-  const getFirst = (...keys)=>keys.find(k=>p[k]!=null && p[k] !== '');
-  const ciKey = getFirst('checkin','date_from','from','arrival','start','checkin_date','check_in','dateStart','start_date');
-  const coKey = getFirst('checkout','date_to','to','departure','end','checkout_date','check_out','dateEnd','end_date');
-  const guestsKey = getFirst('guests','persons','people','count');
-  const adultsKey = getFirst('adults','adult');
-  const kidsKey = getFirst('kids','children','child');
-
-  const parts = [];
-  if (ciKey) parts.push(`Заезд: ${p[ciKey]}`);
-  if (coKey) parts.push(`Выезд: ${p[coKey]}`);
-  if (p[guestsKey]) parts.push(`Гостей: ${p[guestsKey]}`);
-  if (p[adultsKey]) parts.push(`Взрослые: ${p[adultsKey]}`);
-  if (p[kidsKey]) parts.push(`Дети: ${p[kidsKey]}`);
-
-  el.textContent = parts.length ? `Даты бронирования: ${parts.join(' · ')}` : 'Даты бронирования: —';
 }
 
 // === SVG helpers ===
@@ -157,19 +126,19 @@ function getReadableLabel(el){
   const dataName = el.dataset.name || '';
   const parent = el.closest('g');
   const parentLabel = parent && (parent.getAttribute('inkscape:label') || parent.getAttribute('sodipodi:label') || parent.id || '') || '';
-  const name = dataName || id || parentLabel || 'объект';
+  const name = dataName || id || parentLabel || 'Участок';
   const m = (id||'').match(/(\d+)(?!.*\d)/);
   const num = m ? m[1] : '';
   return num ? `${name} №${num}` : name;
 }
 
-// === подготовка интерактива (только питчи, без hover) ===
+// Подготовка интерактива
 function prepareSvg(svg){
   const selLayer = getSelectionLayer();
 
   const groups = Array.from(svg.querySelectorAll('g')).filter(g=>{
     const lab = (g.getAttribute('inkscape:label')||g.getAttribute('sodipodi:label')||g.id||'').toLowerCase();
-    return ['pitches_60','pitches_80','pitches_100'].some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
+    return PITCH_LAYERS.some(layer => lab === layer || lab.startsWith(layer+' ') || lab.startsWith(layer+'_') || lab.startsWith(layer+'-'));
   });
 
   const SHAPES = 'path,rect,polygon,polyline,circle,ellipse,use';
@@ -234,7 +203,6 @@ function prepareSvg(svg){
   });
 }
 
-// показать/скрыть слой
 function setLayerVisible(label, visible){
   const esc = CSS.escape(label);
   $$(`[data-layer="${esc}"]`, svgRoot).forEach(el=>{
@@ -249,7 +217,6 @@ function setLayerVisible(label, visible){
   }
 }
 
-// очистка выбора
 function clearSelection(){
   if (!selectedEl){ selectedLbl.textContent = '—'; btnOk.disabled = btnCancel.disabled = true; return; }
   selectedEl.dataset.sel='0';
@@ -263,25 +230,23 @@ function clearSelection(){
   btnOk.disabled = btnCancel.disabled = true;
 }
 
-// подтверждение
+// Подтверждение — возвращаемся в форму, ДОБАВИВ pitch_* к исходным параметрам
 function submitSelection(){
   if (!selectedEl) return;
-  const payload = {
-    type: 'pitch_selection',
-    id: selectedEl.id || null,
-    name: getReadableLabel(selectedEl),
-    layer: selectedEl.dataset.layer || null,
-    params: getParams()
-  };
 
-  const tg = window.Telegram && window.Telegram.WebApp;
-  if (tg && typeof tg.sendData === 'function'){
-    tg.HapticFeedback?.impactOccurred?.('light');
-    tg.sendData(JSON.stringify(payload));
-    tg.close?.();
-  } else {
-    alert('Выбор отправлен: ' + JSON.stringify(payload, null, 2));
-    const back = new URLSearchParams(location.search).get('back');
-    if (back) location.href = back;
-  }
+  const pid   = selectedEl.id || '';
+  const pname = getReadableLabel(selectedEl);
+  const layer = selectedEl.dataset.layer || '';
+
+  // Берём исходные параметры (from,to,guests,children_ages,phone,email)
+  const orig = new URLSearchParams(location.search);
+
+  // Добавляем выбранный участок
+  orig.set('pitch_id', pid);
+  orig.set('pitch_name', pname);
+  orig.set('layer', layer);
+
+  const base = '../index.html';
+  const qs = orig.toString();
+  location.href = qs ? `${base}?${qs}` : base;
 }

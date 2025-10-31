@@ -3,25 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Booking Form Extended</title>
+  <title>Бронирование визита</title>
 
-  <!-- 💎 Montserrat -->
+  <!-- Montserrat -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%230073bb'/><text x='32' y='40' text-anchor='middle' font-size='32' font-family='Arial' fill='white'>🏕</text></svg>">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div class="card">
-    <!-- 🔶 Мини-шапка бренда -->
+    <!-- Шапка -->
     <div class="brand-bar">
       <img class="brand-logo" src="./assets/logo.png" alt="Логотип" />
-      <div class="brand-title">Агропарк Школа Жизни</div>
+      <div class="brand-title">Агропарк «Школа Жизни»</div>
     </div>
 
-    <!-- 📅 Форма бронирования -->
     <h1>Бронирование визита</h1>
 
     <!-- Даты -->
@@ -31,69 +31,55 @@
     <label for="to">Дата выезда</label>
     <input id="to" type="date" />
 
-    <!-- Количество взрослых -->
+    <!-- Взрослые -->
     <label for="guests">Количество взрослых (14+)</label>
-    <input id="guests" type="number" min="1" placeholder="Например, 2" />
+    <input id="guests" type="number" min="1" placeholder="Например, 2" inputmode="numeric" />
 
-    <!-- 👶 Дети -->
+    <!-- Дети -->
     <div class="accordion">
       <button id="children_toggle" class="accordion-btn" type="button">
         <span class="plus"></span> Добавить детей
       </button>
 
       <div class="accordion-panel" id="children_panel" hidden>
-        <div id="children_list" class="child-list"><!-- динамические строки детей --></div>
+        <div id="children_list" class="child-list"></div>
 
         <div class="child-controls">
           <select id="child_age_select">
             <option value="" selected disabled>Возраст ребёнка</option>
-            <option value="0">до 1 года</option>
-            <option value="1">1 год</option>
-            <option value="2">2 года</option>
-            <option value="3">3 года</option>
-            <option value="4">4 года</option>
-            <option value="5">5 лет</option>
-            <option value="6">6 лет</option>
-            <option value="7">7 лет</option>
-            <option value="8">8 лет</option>
-            <option value="9">9 лет</option>
-            <option value="10">10 лет</option>
-            <option value="11">11 лет</option>
-            <option value="12">12 лет</option>
-            <option value="13">13 лет</option>
+            <option value="0">до 1 года</option><option value="1">1 год</option>
+            <option value="2">2 года</option><option value="3">3 года</option>
+            <option value="4">4 года</option><option value="5">5 лет</option>
+            <option value="6">6 лет</option><option value="7">7 лет</option>
+            <option value="8">8 лет</option><option value="9">9 лет</option>
+            <option value="10">10 лет</option><option value="11">11 лет</option>
+            <option value="12">12 лет</option><option value="13">13 лет</option>
           </select>
         </div>
 
-        <div class="hint">
-          Добавляйте по одному ребёнку. Возраст учитывается до 13 лет включительно.
-        </div>
+        <div class="hint">Добавляйте по одному ребёнку. Возраст до 13 лет включительно.</div>
       </div>
     </div>
 
     <!-- Контакты -->
     <label for="phone">Телефон для связи</label>
-    <input
-      id="phone"
-      type="tel"
-      placeholder="+7 (___) ___-__-__"
-      inputmode="tel"
-      autocomplete="tel"
-    />
+    <input id="phone" type="tel" placeholder="+7 (___) ___-__-__" inputmode="tel" autocomplete="tel" />
 
     <label for="email">Адрес электронной почты</label>
-    <input
-      id="email"
-      type="email"
-      placeholder="example@mail.ru"
-      inputmode="email"
-      autocomplete="email"
-    />
+    <input id="email" type="email" placeholder="example@mail.ru" inputmode="email" autocomplete="email" />
 
-    <!-- Кнопки действий -->
+    <!-- Выбранный участок -->
+    <label for="pitch">Выбранный участок</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input id="pitch" type="text" placeholder="Не выбран" readonly />
+      <button id="clear_pitch" class="secondary small" type="button" title="Сбросить">Сброс</button>
+    </div>
+
+    <!-- Кнопки -->
     <button id="pick_on_map" class="secondary" type="button">Выбрать участок на карте</button>
-    <button id="confirm" type="button">Подтвердить без выбора участка</button>
+    <button id="confirm" type="button">Подтвердить</button>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="./app.js?v=7"></script>
 </body>
 </html>

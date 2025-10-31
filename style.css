@@ -1,132 +1,62 @@
-/* ============================================================
-   📏 Компактная версия формы бронирования
-   ============================================================ */
-
-:root {
-  --page-bg: #f6f6f6;
-  --card-bg: #ffffff;
-  --text-color: #000000;
-  --primary: #4a90e2;
-  --primary-hover: #357ab8;
-  --border-color: #e5e7eb;
-  --muted: #666666;
-
-  --card-max-w: 420px;
-  --card-margin-top: 24px;
-  --card-radius: 12px;
-  --card-shadow: 0 2px 6px rgba(0,0,0,0.08);
-
-  --gap: 8px;
-  --input-padding: 8px 12px;
-  --btn-padding: 10px 14px;
-
-  --font: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  --btn-font: 15px;
-  --brand-title-size: 14px;
-  --logo-size: 24px;
+:root{
+  --page-bg:#f6f6f6; --card-bg:#fff; --text:#000;
+  --primary:#4a90e2; --primary-hover:#357ab8; --border:#e5e7eb; --muted:#666;
+  --card-max-w:420px; --card-mt:24px; --r:12px; --shadow:0 2px 6px rgba(0,0,0,.08);
+  --gap:8px; --input-pad:8px 12px; --btn-pad:10px 14px;
+  --font:'Montserrat',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --btn-font:15px; --brand-size:14px; --logo:24px;
 }
 
-body {
-  font-family: var(--font);
-  color: var(--text-color);
-  margin: 0;
-  padding: 12px;
-  background: var(--page-bg);
-  line-height: 1.35;
+body{font-family:var(--font);color:var(--text);margin:0;padding:12px;background:var(--page-bg);line-height:1.35}
+.card{max-width:var(--card-max-w);margin:var(--card-mt) auto;padding:16px;background:var(--card-bg);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:var(--gap)}
+
+.brand-bar{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.brand-logo{width:var(--logo);height:var(--logo);object-fit:contain}
+.brand-title{font-size:var(--brand-size);font-weight:600}
+
+h1{font-size:24px;font-weight:800;margin:6px 0 8px}
+label{font-size:13px;font-weight:600;margin-bottom:2px}
+input,select{padding:var(--input-pad);font-size:14px;border-radius:8px;border:1px solid var(--border);background:#fff}
+button{padding:var(--btn-pad);font-size:var(--btn-font);background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;transition:background .2s;letter-spacing:.2px}
+button:hover{background:var(--primary-hover)}
+button.secondary{background:#4a90e210;color:#1e3a8a;border:1px solid #9bbff3}
+button.secondary:hover{background:#4a90e220}
+button.small{padding:8px 10px;font-weight:600}
+.card>*:last-child{margin-bottom:0}
+
+.accordion{border:1px solid var(--border);border-radius:10px;background:#fff}
+.accordion-btn{width:100%;text-align:left;background:#fff;color:var(--text);border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer}
+.accordion-btn .plus{width:20px;height:20px;border-radius:50%;border:1px solid var(--border);display:grid;place-items:center;font-weight:700;font-size:14px;line-height:1}
+.accordion-btn.open .plus::after{content:"–"}
+.accordion-btn:not(.open) .plus::after{content:"+"}
+.accordion-panel{padding:10px 12px;border-top:1px solid var(--border);display:block}
+.accordion-panel[hidden]{display:none}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+.child-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.child-item{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:500;color:var(--text)}
+.child-item::before{content:"👤";font-size:16px;opacity:.8}
+.child-label{flex:1;font-weight:500}
+.child-remove{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-weight:700;cursor:pointer;font-size:13px}
+.child-remove:hover{background:#e5e7eb}
+.child-controls{display:flex;gap:8px;align-items:center}
+#child_age_select{flex:1;font-size:13px}
+
+input,select,button{font-family:var(--font)!important}
+
+.invalid{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+
+/* Спиннер на кнопке и состояние успеха */
+button.loading { position: relative; pointer-events: none; opacity: .9; }
+button.loading::after {
+  content: "";
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: spin .8s linear infinite;
 }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
 
-.card {
-  max-width: var(--card-max-w);
-  margin: var(--card-margin-top) auto;
-  padding: 16px;
-  background: var(--card-bg);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
+button.success { background: #22c55e; }           /* зелёная */
+button.success:hover { background: #16a34a; }
 
-.brand-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.brand-logo { width: var(--logo-size); height: var(--logo-size); object-fit: contain; }
-.brand-title { font-size: var(--brand-title-size); font-weight: 600; }
-
-h1 { font-size: 24px; font-weight: 800; margin: 6px 0 8px 0; }
-label { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-
-input, select {
-  padding: var(--input-padding);
-  font-size: 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: #fff;
-}
-button {
-  padding: var(--btn-padding);
-  font-size: var(--btn-font);
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  letter-spacing: 0.2px;
-}
-button:hover { background: var(--primary-hover); }
-
-button.secondary {
-  background: #4a90e210;
-  color: #1e3a8a;
-  border: 1px solid #9bbff3;
-}
-button.secondary:hover { background: #4a90e220; }
-
-button.small { padding: 8px 10px; font-weight: 600; }
-.card > *:last-child { margin-bottom: 0; }
-
-/* Аккордеон */
-.accordion { border: 1px solid var(--border-color); border-radius: 10px; background: #fff; }
-.accordion-btn {
-  width: 100%; text-align: left; background: #fff; color: var(--text-color);
-  border: none; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 600;
-  display: flex; align-items: center; gap: 8px; cursor: pointer;
-}
-.accordion-btn .plus {
-  width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-color);
-  display: grid; place-items: center; font-weight: 700; font-size: 14px; line-height: 1;
-}
-.accordion-btn.open .plus::after { content: "–"; }
-.accordion-btn:not(.open) .plus::after { content: "+"; }
-.accordion-panel { padding: 10px 12px; border-top: 1px solid var(--border-color); display: block; }
-.accordion-panel[hidden] { display: none; }
-
-.hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
-
-/* Дети */
-.child-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-.child-item {
-  display: flex; align-items: center; gap: 8px;
-  background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
-  padding: 8px 10px; font-size: 13px; font-weight: 500; color: var(--text-color);
-}
-.child-item::before { content: "👤"; font-size: 16px; opacity: 0.8; }
-.child-label { flex: 1; font-weight: 500; }
-.child-remove {
-  background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px;
-  padding: 4px 8px; font-weight: 700; cursor: pointer; font-size: 13px;
-}
-.child-remove:hover { background: #e5e7eb; }
-
-.child-controls { display: flex; gap: 8px; align-items: center; }
-#child_age_select { flex: 1; font-size: 13px; }
-
-/* Полный Montserrat */
-input, select, button { font-family: var(--font) !important; }
-
-/* 🔴 Подсветка некорректного поля (и НЕ блокирует ввод) */
-.invalid {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239,68,68,.12);
-  outline: none;
-}
