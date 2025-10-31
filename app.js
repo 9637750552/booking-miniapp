@@ -9,9 +9,27 @@
 
 // ---------- Окружение Telegram ----------
 const tg = window.Telegram?.WebApp || null;
-// Telegram считаем активным ТОЛЬКО если initData непустой
-const IN_TELEGRAM = !!(tg && typeof tg.initData === 'string' && tg.initData.length > 0);
-try { tg?.expand?.(); } catch {}
+
+// БОЛЕЕ НАДЁЖНАЯ детекция запуска в Telegram WebApp
+const IN_TG_BY_INITDATA = !!(tg && typeof tg.initData === 'string' && tg.initData.length > 0);
+const IN_TG_BY_USER     = !!(tg && (tg.initDataUnsafe?.user?.id || tg.initDataUnsafe?.receiver?.id));
+const IN_TG_BY_PLATFORM = !!(tg && typeof tg.platform === 'string' && tg.platform !== 'unknown');
+const IN_TELEGRAM       = IN_TG_BY_INITDATA || IN_TG_BY_USER || IN_TG_BY_PLATFORM;
+
+// Сигнал готовности WebApp (безопасно вызывать всегда)
+try { tg?.ready?.(); tg?.expand?.(); } catch {}
+
+// Консоль для диагностики (полезно на телефоне во встроенном дебаге)
+try {
+  console.log('[env]', {
+    hasTG: !!tg,
+    platform: tg?.platform,
+    version: tg?.version,
+    initDataLen: (tg?.initData?.length || 0),
+    hasUser: !!tg?.initDataUnsafe?.user?.id,
+    IN_TELEGRAM
+  });
+} catch {}
 
 // ---------- Настройки "памяти" формы ----------
 const PERSIST_AFTER_CLOSE = true; // true — помнить после закрытия; false — очищать после успешной отправки
@@ -19,7 +37,7 @@ const PERSIST_TTL_HOURS   = 24;   // срок жизни сохранённой 
 
 // Персональный ключ для одного пользователя
 const USER_ID = IN_TELEGRAM
-  ? (tg.initDataUnsafe?.user?.id || tg.initDataUnsafe?.receiver?.id || 'tg')
+  ? (tg?.initDataUnsafe?.user?.id || tg?.initDataUnsafe?.receiver?.id || tg?.platform || 'tg')
   : 'local';
 const STORAGE_KEY = `booking_form_v1_${USER_ID}`;
 
