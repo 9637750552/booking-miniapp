@@ -1,58 +1,40 @@
 /* ============================================================
-   📏 Компактная версия формы бронирования — с комментариями
-   ------------------------------------------------------------
-   • Под Montserrat
-   • Аккордеон «Добавить детей» с динамическими строками
-   • Мини-карточка, чтобы влезало в MiniApp без прокрутки
+   📏 Компактная версия формы бронирования
    ============================================================ */
 
-/* ============================================================
-   🎨 ПАЛИТРА И ТОКЕНЫ ДИЗАЙНА
-   ------------------------------------------------------------
-   При желании правь только эти переменные.
-   ============================================================ */
 :root {
-  /* === Цвета === */
-  --page-bg: #f6f6f6;          /* Фон страницы */
-  --card-bg: #ffffff;          /* Фон карточки формы */
-  --text-color: #000000;       /* Базовый текст */
-  --primary: #4a90e2;          /* Основной брендовый цвет */
-  --primary-hover: #357ab8;    /* Ховер для кнопок */
-  --border-color: #e5e7eb;     /* Границы инпутов/карточек */
-  --muted: #666666;            /* Подписи/подсказки */
+  --page-bg: #f6f6f6;
+  --card-bg: #ffffff;
+  --text-color: #000000;
+  --primary: #4a90e2;
+  --primary-hover: #357ab8;
+  --border-color: #e5e7eb;
+  --muted: #666666;
 
-  /* === Геометрия === */
-  --card-max-w: 420px;         /* Максимальная ширина карточки */
-  --card-margin-top: 24px;     /* Отступ сверху */
-  --card-radius: 12px;         /* Скругления карточки */
+  --card-max-w: 420px;
+  --card-margin-top: 24px;
+  --card-radius: 12px;
   --card-shadow: 0 2px 6px rgba(0,0,0,0.08);
 
-  --gap: 8px;                  /* Базовый вертикальный зазор */
-  --input-padding: 8px 12px;   /* Внутренние отступы инпутов */
-  --btn-padding: 10px 14px;    /* Внутренние отступы кнопок */
+  --gap: 8px;
+  --input-padding: 8px 12px;
+  --btn-padding: 10px 14px;
 
-  /* === Типографика === */
   --font: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  --btn-font: 15px;            /* Размер шрифта кнопок */
-  --brand-title-size: 14px;    /* Размер подписи бренда */
-  --logo-size: 24px;           /* Размер логотипа в шапке */
+  --btn-font: 15px;
+  --brand-title-size: 14px;
+  --logo-size: 24px;
 }
 
-/* ============================================================
-   ⚙️ БАЗОВЫЕ СТИЛИ СТРАНИЦЫ
-   ============================================================ */
 body {
   font-family: var(--font);
   color: var(--text-color);
   margin: 0;
   padding: 12px;
   background: var(--page-bg);
-  line-height: 1.35;           /* Чуть «воздушнее» под Montserrat */
+  line-height: 1.35;
 }
 
-/* ============================================================
-   🧱 КАРТОЧКА ФОРМЫ
-   ============================================================ */
 .card {
   max-width: var(--card-max-w);
   margin: var(--card-margin-top) auto;
@@ -65,40 +47,14 @@ body {
   gap: var(--gap);
 }
 
-/* ============================================================
-   🏷️ МИНИ-ШАПКА БРЕНДА
-   ============================================================ */
-.brand-bar {
-  display: flex;               /* Лого + текст в строку */
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.brand-logo {
-  width: var(--logo-size);
-  height: var(--logo-size);
-  object-fit: contain;         /* Без искажения пропорций */
-}
-.brand-title {
-  font-size: var(--brand-title-size);
-  font-weight: 600;
-}
+.brand-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.brand-logo { width: var(--logo-size); height: var(--logo-size); object-fit: contain; }
+.brand-title { font-size: var(--brand-title-size); font-weight: 600; }
 
-/* ============================================================
-   ✏️ ТЕКСТ И ФОРМ-ЭЛЕМЕНТЫ
-   ============================================================ */
-h1 {
-  font-size: 24px;             /* Крупнее для Montserrat */
-  font-weight: 800;
-  margin: 6px 0 8px 0;
-}
-label {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-input,
-select {
+h1 { font-size: 24px; font-weight: 800; margin: 6px 0 8px 0; }
+label { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+
+input, select {
   padding: var(--input-padding);
   font-size: 14px;
   border-radius: 8px;
@@ -119,7 +75,6 @@ button {
 }
 button:hover { background: var(--primary-hover); }
 
-/* Вспомогательная «вторая» кнопка (бледно-синяя) */
 button.secondary {
   background: #4a90e210;
   color: #1e3a8a;
@@ -127,131 +82,51 @@ button.secondary {
 }
 button.secondary:hover { background: #4a90e220; }
 
-/* Компактная кнопка (для «Добавить») */
 button.small { padding: 8px 10px; font-weight: 600; }
-
-/* Убираем лишний нижний отступ у последнего элемента в карточке */
 .card > *:last-child { margin-bottom: 0; }
 
-/* ============================================================
-   👶 АККОРДЕОН «ДОБАВИТЬ ДЕТЕЙ»
-   ------------------------------------------------------------
-   Состоит из:
-   • .accordion         — рамка/контейнер
-   • .accordion-btn     — «шапка» со значком (+/–)
-   • .accordion-panel   — содержимое (список + селект)
-   ============================================================ */
-.accordion {
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: #fff;
-}
+/* Аккордеон */
+.accordion { border: 1px solid var(--border-color); border-radius: 10px; background: #fff; }
 .accordion-btn {
-  width: 100%;
-  text-align: left;
-  background: #fff;
-  color: var(--text-color);
-  border: none;
-  border-radius: 10px;
-  padding: 10px 12px;           /* меньше высота */
-  font-size: 13px;              /* как у label */
-  font-weight: 600;             /* как у label */
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
+  width: 100%; text-align: left; background: #fff; color: var(--text-color);
+  border: none; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
 }
-/* Кружок со знаком + / – */
 .accordion-btn .plus {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1;
+  width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-color);
+  display: grid; place-items: center; font-weight: 700; font-size: 14px; line-height: 1;
 }
-.accordion-btn.open .plus::after { content: "–"; } /* раскрыто */
-.accordion-btn:not(.open) .plus::after { content: "+"; } /* свернуто */
-
-.accordion-panel {
-  padding: 10px 12px;
-  border-top: 1px solid var(--border-color);
-  display: block;
-}
+.accordion-btn.open .plus::after { content: "–"; }
+.accordion-btn:not(.open) .plus::after { content: "+"; }
+.accordion-panel { padding: 10px 12px; border-top: 1px solid var(--border-color); display: block; }
 .accordion-panel[hidden] { display: none; }
 
-.hint {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 6px;
-}
+.hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
-/* ============================================================
-   👧 СТРОКИ ДОБАВЛЕННЫХ ДЕТЕЙ
-   ------------------------------------------------------------
-   JS генерирует:
-   • .child-list         — контейнер c вертикальным списком
-   • .child-item         — одна строка «Ребёнок N …   ×»
-   • .child-label        — текст слева
-   • .child-remove       — кнопка удаления (крестик)
-   ============================================================ */
-.child-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
-}
+/* Дети */
+.child-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
 .child-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 13px;              /* единый размер как у формы */
-  font-weight: 500;             /* средний вес */
-  color: var(--text-color);
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
+  padding: 8px 10px; font-size: 13px; font-weight: 500; color: var(--text-color);
 }
-.child-item::before {
-  content: "👤";                 /* маленькая пиктограмма */
-  font-size: 16px;
-  opacity: 0.8;
-}
-.child-label {
-  flex: 1;
-  font-weight: 500;              /* не жирный */
-}
+.child-item::before { content: "👤"; font-size: 16px; opacity: 0.8; }
+.child-label { flex: 1; font-weight: 500; }
 .child-remove {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 13px;
+  background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px;
+  padding: 4px 8px; font-weight: 700; cursor: pointer; font-size: 13px;
 }
 .child-remove:hover { background: #e5e7eb; }
 
-/* ============================================================
-   🧩 СЕЛЕКТ ВОЗРАСТА
-   ============================================================ */
-.child-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-#child_age_select {
-  flex: 1;
-  font-size: 13px;              /* как у label */
-}
+.child-controls { display: flex; gap: 8px; align-items: center; }
+#child_age_select { flex: 1; font-size: 13px; }
 
-/* ============================================================
-   🔠 ПОЛНЫЙ МОНТСЕРРАТ ДЛЯ ВСЕХ ФОРМ-ЭЛЕМЕНТОВ
-   ============================================================ */
-input, select, button {
-  font-family: var(--font) !important;
+/* Полный Montserrat */
+input, select, button { font-family: var(--font) !important; }
+
+/* 🔴 Подсветка некорректного поля (и НЕ блокирует ввод) */
+.invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+  outline: none;
 }

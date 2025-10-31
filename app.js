@@ -1,9 +1,8 @@
 // ============================================================
 //  app.js — форма бронирования (экран 1)
 //  • «Добавить детей» без кнопки (выбор = добавление)
-//  • Валидация контактов: телефон / e-mail
-//  • Требование: хотя бы один контакт обязателен
-//  • Исправлен переход на карту при открытии с file://
+//  • Валидация контактов: телефон / e-mail (хотя бы одно обязательно)
+//  • Fix: после сообщения об ошибке поля НЕ "залипают", фокус возвращается
 // ============================================================
 
 const tg = window.Telegram?.WebApp;
@@ -38,9 +37,7 @@ function datesValid() {
   try { return new Date(t).getTime() >= new Date(f).getTime(); }
   catch { return false; }
 }
-function updateButtonsState() {
-  btnPickOnMap.disabled = !datesValid();
-}
+function updateButtonsState() { btnPickOnMap.disabled = !datesValid(); }
 ['change','input'].forEach(ev => {
   elFrom.addEventListener(ev, updateButtonsState);
   elTo.addEventListener(ev, updateButtonsState);
@@ -96,8 +93,6 @@ function renderChildren() {
     listChildren.appendChild(row);
   });
 }
-
-// Добавление ребёнка при выборе возраста
 function addChildBySelect() {
   const v = selAge.value;
   if (!v || v === '') return;
@@ -105,7 +100,7 @@ function addChildBySelect() {
   if (Number.isNaN(n) || n < 0 || n > 13) return;
   childrenAges.push(n);
   renderChildren();
-  selAge.value = ''; // сброс селекта на плейсхолдер
+  selAge.value = '';
 }
 selAge.addEventListener('change', addChildBySelect);
 
@@ -113,9 +108,7 @@ selAge.addEventListener('change', addChildBySelect);
 // 📞📧 Валидация контактов
 // ------------------------------------------------------------
 function normalizePhone(raw) {
-  return (raw || '')
-    .replace(/[^\d+]/g, '')
-    .replace(/(?!^)\+/g, '');
+  return (raw || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
 }
 function isValidPhone(raw) {
   const p = normalizePhone(raw);
@@ -129,14 +122,33 @@ function isValidEmail(raw) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
   return re.test(s);
 }
+function clearInvalid() { [elPhone, elEmail].forEach(el => el.classList.remove('invalid')); }
+
+// 🔧 ГЛАВНЫЙ ФИКС: после сообщения всегда возвращаем фокус и «размораживаем» поле
 function markInvalid(el, msg) {
-  el.classList.add('invalid');
+  try { el.classList.add('invalid'); } catch {}
+  // Покажем сообщение
   alert(msg);
-  el.focus();
+  // Безопасно вернуть фокус после закрытия alert
+  setTimeout(() => {
+    try {
+      el.removeAttribute?.('disabled');
+      el.readOnly = false;
+      el.focus({ preventScroll: true });
+      el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      // Для input — поместим каретку в конец
+      if ('selectionStart' in el) {
+        const len = el.value?.length ?? 0;
+        el.selectionStart = el.selectionEnd = len;
+      }
+    } catch {}
+  }, 0);
 }
-function clearInvalid() {
-  [elPhone, elEmail].forEach(el => el.classList.remove('invalid'));
-}
+
+// При любом вводе — снять «красную» подсветку
+[elPhone, elEmail].forEach(el => {
+  el.addEventListener('input', () => el.classList.remove('invalid'));
+});
 
 // ------------------------------------------------------------
 // 🗺 Переход на карту (исправлено для file://)
@@ -151,12 +163,8 @@ btnPickOnMap.addEventListener('click', () => {
     from: elFrom.value,
     to: elTo.value,
     guests: elGuests.value || '1',
-    // при желании можно добавить детей:
-    // children_count: String(childrenAges.length),
-    // children_ages: childrenAges.join(',')
   });
 
-  // 🔧 Явно указываем index.html для корректной работы с file://
   const target = (location.protocol === 'file:')
     ? `./map/index.html?${params.toString()}`
     : `./map/?${params.toString()}`;
@@ -208,6 +216,5 @@ btnConfirm.addEventListener('click', () => {
 });
 
 // ------------------------------------------------------------
-// 🎨 Для ошибок (добавь в CSS):
-// .invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+// 🎨 (стили подсветки есть в style.css: .invalid {...})
 // ------------------------------------------------------------
