@@ -246,7 +246,7 @@ function submitSelection(){
   orig.set('pitch_name', pname);
   orig.set('layer', layer);
 
-  const base = '../index.html';
+  const base = '../booking/index.html';
   const qs = orig.toString();
   location.href = qs ? `${base}?${qs}` : base;
 }
