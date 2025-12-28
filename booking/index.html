@@ -84,6 +84,7 @@
 
   <script>
   const s = document.createElement('script');
+  s.type = 'module';
   s.src = './app.js?v=' + Date.now(); // всегда новая версия, кэш не залипает
   document.body.appendChild(s);
   </script>
