@@ -396,8 +396,8 @@ btnPickOnMap.addEventListener('click', () => {
     email: state.email
   });
   const target = (location.protocol === 'file:')
-    ? `./map/index.html?${params.toString()}`
-    : `./map/?${params.toString()}`;
+    ? `../map/index.html?${params.toString()}`
+    : `../map/?${params.toString()}`;
   location.href = target;
 });
 
