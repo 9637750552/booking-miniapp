@@ -36,4 +36,7 @@ async function init(){
   svgOverlay = loaded.svgOverlay;
 
   prepareSvg(svgRoot, selectedLbl, btnOk, btnCancel);
+  requestAnimationFrame(() => {
+    map.invalidateSize();
+  });
 }
