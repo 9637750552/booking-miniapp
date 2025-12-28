@@ -1,7 +1,7 @@
 // ============================================================
 // map/app.js — карта выбора участка
 // • Получает все параметры формы из URL (from,to,guests,children_ages,phone,email)
-// • При подтверждении ДОБАВЛЯЕТ pitch_id/pitch_name/layer и возвращает в ../index.html
+// • При подтверждении ДОБАВЛЯЕТ pitch_id/pitch_name/layer и возвращает в ../booking/index.html
 //   сохранив исходные параметры (чтобы форма восстановилась и показала участок).
 // ============================================================
 
@@ -57,7 +57,7 @@ function wireUI(){
 
   // Назад: просто вернуться с исходными параметрами (если были)
   $('#back-btn').addEventListener('click', ()=>{
-    const base = '../index.html';
+    const base = '../booking/index.html';
     const qs = location.search;
     location.href = qs ? `${base}${qs}` : base;
   });
