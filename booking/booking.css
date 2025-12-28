@@ -1,13 +1,3 @@
-:root{
-  --page-bg:#f6f6f6; --card-bg:#fff; --text:#000;
-  --primary:#4a90e2; --primary-hover:#357ab8; --border:#e5e7eb; --muted:#666;
-  --card-max-w:420px; --card-mt:24px; --r:12px; --shadow:0 2px 6px rgba(0,0,0,.08);
-  --gap:8px; --input-pad:8px 12px; --btn-pad:10px 14px;
-  --font:'Montserrat',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  --btn-font:15px; --brand-size:14px; --logo:24px;
-}
-
-body{font-family:var(--font);color:var(--text);margin:0;padding:12px;background:var(--page-bg);line-height:1.35}
 .card{max-width:var(--card-max-w);margin:var(--card-mt) auto;padding:16px;background:var(--card-bg);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:var(--gap)}
 
 .brand-bar{display:flex;align-items:center;gap:8px;margin-bottom:4px}
@@ -17,11 +7,6 @@ body{font-family:var(--font);color:var(--text);margin:0;padding:12px;background:
 h1{font-size:24px;font-weight:800;margin:6px 0 8px}
 label{font-size:13px;font-weight:600;margin-bottom:2px}
 input,select{padding:var(--input-pad);font-size:14px;border-radius:8px;border:1px solid var(--border);background:#fff}
-button{padding:var(--btn-pad);font-size:var(--btn-font);background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;transition:background .2s;letter-spacing:.2px}
-button:hover{background:var(--primary-hover)}
-button.secondary{background:#4a90e210;color:#1e3a8a;border:1px solid #9bbff3}
-button.secondary:hover{background:#4a90e220}
-button.small{padding:8px 10px;font-weight:600}
 .card>*:last-child{margin-bottom:0}
 
 .accordion{border:1px solid var(--border);border-radius:10px;background:#fff}
@@ -45,18 +30,3 @@ button.small{padding:8px 10px;font-weight:600}
 input,select,button{font-family:var(--font)!important}
 
 .invalid{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
-
-/* Спиннер на кнопке и состояние успеха */
-button.loading { position: relative; pointer-events: none; opacity: .9; }
-button.loading::after {
-  content: "";
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid currentColor; border-right-color: transparent;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
-
-button.success { background: #22c55e; }           /* зелёная */
-button.success:hover { background: #16a34a; }
-
