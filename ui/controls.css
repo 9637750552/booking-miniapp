@@ -1,0 +1,32 @@
+button{padding:var(--btn-pad);font-size:var(--btn-font);background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;transition:background .2s;letter-spacing:.2px}
+button:hover{background:var(--primary-hover)}
+button.secondary{background:#4a90e210;color:#1e3a8a;border:1px solid #9bbff3}
+button.secondary:hover{background:#4a90e220}
+button.small{padding:8px 10px;font-weight:600}
+button:disabled{opacity:.6;cursor:not-allowed}
+
+.primary{padding:8px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:400;letter-spacing:normal;font-size:inherit}
+.primary:hover{background:var(--primary)}
+.ghost{padding:8px 12px;background:var(--ghost);border:1px solid var(--border);color:var(--text);border-radius:8px;font-weight:400;letter-spacing:normal;font-size:inherit}
+.ghost:hover{background:var(--ghost)}
+
+.toggle{padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-weight:400;letter-spacing:normal;color:var(--text);font-size:inherit}
+.toggle.on{background:#e8f0ff;border-color:#c7d7ff}
+.toggle:hover{background:#fff}
+
+.round{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-weight:400;letter-spacing:normal;color:var(--text);font-size:inherit}
+.round:hover{background:#fff}
+
+/* Спиннер на кнопке и состояние успеха */
+button.loading { position: relative; pointer-events: none; opacity: .9; }
+button.loading::after {
+  content: "";
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+button.success { background: #22c55e; }           /* зелёная */
+button.success:hover { background: #16a34a; }
